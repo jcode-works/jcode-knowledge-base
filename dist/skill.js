@@ -1,6 +1,7 @@
 import { cp, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureMimirGitignore } from "./gitignore.js";
 const PACKAGE_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const SKILL_NAME = "mimir";
 export function bundledSkillPath() {
@@ -18,15 +19,20 @@ export async function installSkill(options = {}) {
     await cp(bundledSkillPath(), skillPath, { recursive: true, force: true });
     await writeFile(mcpConfigPath, `${JSON.stringify(mcpConfig(cwd), null, 2)}\n`, "utf8");
     await writeFile(readmePath, agentKitReadme(skillPath, mcpConfigPath), "utf8");
+    const wroteGitignore = await ensureMimirGitignore(cwd);
+    const written = [
+        path.relative(cwd, skillPath),
+        path.relative(cwd, mcpConfigPath),
+        path.relative(cwd, readmePath),
+    ];
+    if (wroteGitignore) {
+        written.push(".gitignore");
+    }
     return {
         skillPath,
         mcpConfigPath,
         readmePath,
-        written: [
-            path.relative(cwd, skillPath),
-            path.relative(cwd, mcpConfigPath),
-            path.relative(cwd, readmePath),
-        ],
+        written,
     };
 }
 function mcpConfig(cwd) {

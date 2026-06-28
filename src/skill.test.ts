@@ -28,4 +28,18 @@ describe("installSkill", () => {
     expect(mcpConfig.mcpServers.mimir.args).toEqual(["exec", "kb", "serve-mcp"])
     expect(mcpConfig.mcpServers.mimir.cwd).toBe(root)
   })
+
+  it("adds Mimir runtime folders to gitignore without duplicating entries", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mimir-skill-"))
+    tempDirs.push(root)
+
+    const first = await installSkill({ cwd: root })
+    const second = await installSkill({ cwd: root })
+    const gitignore = await readFile(path.join(root, ".gitignore"), "utf8")
+
+    expect(first.written).toContain(".gitignore")
+    expect(second.written).not.toContain(".gitignore")
+    expect(gitignore.match(/^\.kb\/$/gm)).toHaveLength(1)
+    expect(gitignore.match(/^\.mimir\/$/gm)).toHaveLength(1)
+  })
 })
