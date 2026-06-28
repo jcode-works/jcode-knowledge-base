@@ -13,6 +13,8 @@ and uses Ollama for local embeddings and answers.
 
 Created by Jean-Baptiste Thery and published under the JCode Labs npm scope.
 
+Built by Jean-Baptiste Thery, freelance full-stack/AI tooling engineer at JCode Labs.
+
 ## Open Source
 
 Mimir is a public open-source project under the MIT License. It is designed to be
@@ -20,6 +22,20 @@ inspectable, forkable, and usable without a JCode Labs account.
 
 Contributions are welcome through pull requests. Start with [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 Security reports should stay private and follow the policy in [`SECURITY.md`](./SECURITY.md).
+
+## Sponsors
+
+Mimir stays MIT open source. Sponsorship helps fund maintenance, issue triage,
+documentation, and practical agent-workflow improvements.
+
+Sponsor the project through [GitHub Sponsors](https://github.com/sponsors/jb-thery).
+
+Suggested GitHub Sponsors tiers:
+
+- EUR 5/month: support the project.
+- EUR 15/month: active sponsor.
+- EUR 49/month: priority on issues and questions.
+- EUR 199/month: company sponsor and light advisory support.
 
 ## Status
 
@@ -161,8 +177,9 @@ your-project/
   .kb/storage/      # generated LanceDB index
 ```
 
-The package never ships project documents. `kb init` adds gitignore entries for `.kb/storage/`
-and `private/**`.
+The package never ships project documents. `kb init` adds gitignore entries for `.kb/`
+and `private/**`, and `kb install-skill` keeps `.mimir/` ignored as generated local agent
+state.
 
 ## Supported Files
 

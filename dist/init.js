@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { ensureMimirGitignore } from "./gitignore.js";
 const DEFAULT_CONFIG = {
     rawDir: "private",
     storageDir: ".kb/storage",
@@ -13,7 +14,6 @@ const DEFAULT_CONFIG = {
     chunkSize: 1200,
     chunkOverlap: 150,
 };
-const GITIGNORE_BLOCK = `\n# Mimir\n.kb/storage/\n.kb/cache/\n.kb/*.local.json\nprivate/**\n!private/\n!private/README.md\n!private/**/\n!private/**/.gitkeep\n`;
 export async function initProject(cwd = process.cwd()) {
     const root = path.resolve(cwd);
     const kbDir = path.join(root, ".kb");
@@ -36,11 +36,8 @@ export async function initProject(cwd = process.cwd()) {
         await writeFile(readmePath, "# Private documents\n\nPut raw documents to ingest here. Keep this folder ignored by Git.\n", "utf8");
         created.push(path.relative(root, readmePath));
     }
-    const gitignorePath = path.join(root, ".gitignore");
-    const currentGitignore = existsSync(gitignorePath) ? await readFile(gitignorePath, "utf8") : "";
-    if (!currentGitignore.includes("# Mimir") && !currentGitignore.includes("# JCode Mimir")) {
-        await writeFile(gitignorePath, `${currentGitignore.trimEnd()}${GITIGNORE_BLOCK}`, "utf8");
-        created.push(path.relative(root, gitignorePath));
+    if (await ensureMimirGitignore(root)) {
+        created.push(".gitignore");
     }
     return created;
 }

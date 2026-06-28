@@ -39,6 +39,9 @@ try {
   await runKb(["install-skill"], tempRoot)
   const skill = await readFile(path.join(tempRoot, ".mimir", "skills", "mimir", "SKILL.md"), "utf8")
   assertIncludes(skill, "name: mimir", "install-skill should copy the bundled skill")
+  const gitignore = await readFile(path.join(tempRoot, ".gitignore"), "utf8")
+  assertIncludes(gitignore, ".kb/", "init should ignore the Mimir config and index directory")
+  assertIncludes(gitignore, ".mimir/", "install-skill should ignore generated agent kit files")
 
   await smokeMcp(tempRoot)
   console.log("Smoke test passed.")
