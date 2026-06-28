@@ -39,6 +39,13 @@ For local development:
 pnpm add -D file:../jcode-knowledge-base
 ```
 
+Before creating an npm tarball later, run:
+
+```bash
+pnpm build
+pnpm pack
+```
+
 ## Use In Any Repository
 
 Initialize the local project config:
