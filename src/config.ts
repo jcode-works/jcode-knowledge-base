@@ -1,8 +1,8 @@
-import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { z } from "zod";
-import type { Config } from "./types.js";
+import { existsSync } from "node:fs"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
+import { z } from "zod"
+import type { Config } from "./types.js"
 
 const rawConfigSchema = z.object({
   rawDir: z.string().default("private"),
@@ -15,40 +15,40 @@ const rawConfigSchema = z.object({
   topK: z.number().int().positive().default(5),
   chunkSize: z.number().int().positive().default(1200),
   chunkOverlap: z.number().int().nonnegative().default(150),
-});
+})
 
-type RawConfig = z.infer<typeof rawConfigSchema>;
+type RawConfig = z.infer<typeof rawConfigSchema>
 
-const CONFIG_PATH = ".kb/config.json";
+const CONFIG_PATH = ".kb/config.json"
 
 export function findProjectRoot(start = process.cwd()): string {
-  let current = path.resolve(start);
+  let current = path.resolve(start)
 
   while (true) {
     if (existsSync(path.join(current, CONFIG_PATH))) {
-      return current;
+      return current
     }
 
-    const parent = path.dirname(current);
+    const parent = path.dirname(current)
     if (parent === current) {
-      return path.resolve(start);
+      return path.resolve(start)
     }
-    current = parent;
+    current = parent
   }
 }
 
 export async function loadConfig(start = process.cwd()): Promise<Config> {
-  const projectRoot = findProjectRoot(start);
-  const configFile = path.join(projectRoot, CONFIG_PATH);
+  const projectRoot = findProjectRoot(start)
+  const configFile = path.join(projectRoot, CONFIG_PATH)
   const raw = existsSync(configFile)
-    ? JSON.parse(await readFile(configFile, "utf8")) as unknown
-    : {};
+    ? (JSON.parse(await readFile(configFile, "utf8")) as unknown)
+    : {}
 
-  const parsed = rawConfigSchema.parse(raw);
-  const withEnv = applyEnv(parsed);
+  const parsed = rawConfigSchema.parse(raw)
+  const withEnv = applyEnv(parsed)
 
   if (withEnv.chunkOverlap >= withEnv.chunkSize) {
-    throw new Error("chunkOverlap must be lower than chunkSize.");
+    throw new Error("chunkOverlap must be lower than chunkSize.")
   }
 
   return {
@@ -63,11 +63,11 @@ export async function loadConfig(start = process.cwd()): Promise<Config> {
     topK: withEnv.topK,
     chunkSize: withEnv.chunkSize,
     chunkOverlap: withEnv.chunkOverlap,
-  };
+  }
 }
 
 function resolveFromRoot(projectRoot: string, input: string): string {
-  return path.isAbsolute(input) ? input : path.resolve(projectRoot, input);
+  return path.isAbsolute(input) ? input : path.resolve(projectRoot, input)
 }
 
 function applyEnv(config: RawConfig): RawConfig {
@@ -82,23 +82,23 @@ function applyEnv(config: RawConfig): RawConfig {
     topK: readPositiveIntEnv("KB_TOP_K", config.topK),
     chunkSize: readPositiveIntEnv("KB_CHUNK_SIZE", config.chunkSize),
     chunkOverlap: readNonNegativeIntEnv("KB_CHUNK_OVERLAP", config.chunkOverlap),
-  };
+  }
 }
 
 function readPositiveIntEnv(name: string, fallback: number): number {
-  const raw = process.env[name];
+  const raw = process.env[name]
   if (!raw) {
-    return fallback;
+    return fallback
   }
-  const value = Number.parseInt(raw, 10);
-  return Number.isInteger(value) && value > 0 ? value : fallback;
+  const value = Number.parseInt(raw, 10)
+  return Number.isInteger(value) && value > 0 ? value : fallback
 }
 
 function readNonNegativeIntEnv(name: string, fallback: number): number {
-  const raw = process.env[name];
+  const raw = process.env[name]
   if (!raw) {
-    return fallback;
+    return fallback
   }
-  const value = Number.parseInt(raw, 10);
-  return Number.isInteger(value) && value >= 0 ? value : fallback;
+  const value = Number.parseInt(raw, 10)
+  return Number.isInteger(value) && value >= 0 ? value : fallback
 }

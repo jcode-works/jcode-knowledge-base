@@ -1,0 +1,31 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises"
+import os from "node:os"
+import path from "node:path"
+import { afterEach, describe, expect, it } from "vitest"
+import { installSkill } from "./skill.js"
+
+const tempDirs: string[] = []
+
+afterEach(async () => {
+  for (const dir of tempDirs.splice(0)) {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+describe("installSkill", () => {
+  it("copies the bundled skill and writes an MCP config example", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mimir-skill-"))
+    tempDirs.push(root)
+
+    const result = await installSkill({ cwd: root })
+    const skill = await readFile(path.join(result.skillPath, "SKILL.md"), "utf8")
+    const mcpConfig = JSON.parse(await readFile(result.mcpConfigPath, "utf8")) as {
+      mcpServers: { mimir: { command: string; args: string[]; cwd: string } }
+    }
+
+    expect(skill).toContain("name: mimir")
+    expect(mcpConfig.mcpServers.mimir.command).toBe("pnpm")
+    expect(mcpConfig.mcpServers.mimir.args).toEqual(["exec", "kb", "serve-mcp"])
+    expect(mcpConfig.mcpServers.mimir.cwd).toBe(root)
+  })
+})

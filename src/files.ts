@@ -1,9 +1,9 @@
-import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import { readFile, stat } from "node:fs/promises";
-import path from "node:path";
-import fg from "fast-glob";
-import type { Config, SourceFile } from "./types.js";
+import { createHash } from "node:crypto"
+import { existsSync } from "node:fs"
+import { readFile, stat } from "node:fs/promises"
+import path from "node:path"
+import fg from "fast-glob"
+import type { Config, SourceFile } from "./types.js"
 
 export const SUPPORTED_EXTENSIONS = new Set([
   ".csv",
@@ -18,15 +18,15 @@ export const SUPPORTED_EXTENSIONS = new Set([
   ".txt",
   ".yaml",
   ".yml",
-]);
+])
 
 export async function listSourceFiles(config: Config): Promise<SourceFile[]> {
-  const roots = await sourceRoots(config);
-  const files = new Map<string, SourceFile>();
+  const roots = await sourceRoots(config)
+  const files = new Map<string, SourceFile>()
 
   for (const root of roots) {
     if (!existsSync(root)) {
-      continue;
+      continue
     }
 
     const entries = await fg("**/*", {
@@ -36,16 +36,16 @@ export async function listSourceFiles(config: Config): Promise<SourceFile[]> {
       dot: false,
       followSymbolicLinks: false,
       ignore: ["**/.git/**", "**/node_modules/**", "**/.kb/storage/**"],
-    });
+    })
 
     for (const absolutePath of entries) {
-      const extension = path.extname(absolutePath).toLowerCase();
+      const extension = path.extname(absolutePath).toLowerCase()
       if (!SUPPORTED_EXTENSIONS.has(extension)) {
-        continue;
+        continue
       }
 
-      const info = await stat(absolutePath);
-      const buffer = await readFile(absolutePath);
+      const info = await stat(absolutePath)
+      const buffer = await readFile(absolutePath)
       files.set(absolutePath, {
         absolutePath,
         relativePath: path.relative(config.projectRoot, absolutePath),
@@ -54,27 +54,27 @@ export async function listSourceFiles(config: Config): Promise<SourceFile[]> {
         bytes: info.size,
         mtimeMs: info.mtimeMs,
         checksum: createHash("sha256").update(buffer).digest("hex"),
-      });
+      })
     }
   }
 
-  return [...files.values()].sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+  return [...files.values()].sort((a, b) => a.relativePath.localeCompare(b.relativePath))
 }
 
 async function sourceRoots(config: Config): Promise<string[]> {
-  const roots = [config.rawDir];
+  const roots = [config.rawDir]
   if (!existsSync(config.sourcesFile)) {
-    return roots;
+    return roots
   }
 
-  const content = await readFile(config.sourcesFile, "utf8");
+  const content = await readFile(config.sourcesFile, "utf8")
   for (const line of content.split(/\r?\n/u)) {
-    const trimmed = line.trim();
+    const trimmed = line.trim()
     if (!trimmed || trimmed.startsWith("#")) {
-      continue;
+      continue
     }
-    roots.push(path.isAbsolute(trimmed) ? trimmed : path.resolve(config.projectRoot, trimmed));
+    roots.push(path.isAbsolute(trimmed) ? trimmed : path.resolve(config.projectRoot, trimmed))
   }
 
-  return roots;
+  return roots
 }

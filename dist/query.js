@@ -9,7 +9,10 @@ export async function search(query, options = {}) {
         return [];
     }
     const vector = await embedText(query, config);
-    const rows = await table.vectorSearch(vector).limit(options.topK ?? config.topK).toArray();
+    const rows = (await table
+        .vectorSearch(vector)
+        .limit(options.topK ?? config.topK)
+        .toArray());
     return rows.map((row) => ({
         source: row.source,
         relativePath: row.relativePath,

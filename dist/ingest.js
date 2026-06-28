@@ -1,7 +1,7 @@
-import { loadConfig } from "./config.js";
-import { listSourceFiles } from "./files.js";
 import { chunkDocument } from "./chunking.js";
+import { loadConfig } from "./config.js";
 import { embedTexts } from "./embeddings.js";
+import { listSourceFiles } from "./files.js";
 import { parseFile } from "./parsing.js";
 import { openRowsTable, writeRows } from "./store.js";
 const EMBED_BATCH_SIZE = 32;
@@ -61,7 +61,7 @@ export async function audit(cwd = process.cwd()) {
             totalChunks: 0,
         };
     }
-    const rows = await table.query().limit(100000).toArray();
+    const rows = (await table.query().limit(100000).toArray());
     const counts = new Map();
     for (const row of rows) {
         counts.set(row.relativePath, (counts.get(row.relativePath) ?? 0) + 1);

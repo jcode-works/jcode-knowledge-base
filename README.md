@@ -1,16 +1,29 @@
-# JCode Mimir
+# Mimir
 
-Local-first memory and retrieval for private project knowledge.
+[![CI](https://github.com/jcode-works/jcode-mimir/actions/workflows/ci.yml/badge.svg)](https://github.com/jcode-works/jcode-mimir/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/jcode-works/jcode-mimir/actions/workflows/codeql.yml/badge.svg)](https://github.com/jcode-works/jcode-mimir/actions/workflows/codeql.yml)
+[![npm](https://img.shields.io/npm/v/@jcode.labs/mimir)](https://www.npmjs.com/package/@jcode.labs/mimir)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-JCode Mimir provides a TypeScript CLI and library that can be installed in any Node.js
+Open-source, local-first memory and retrieval for private project knowledge.
+
+Mimir provides a TypeScript CLI and library that can be installed in any Node.js
 repository. It indexes files from the target repository, stores vectors locally with LanceDB,
 and uses Ollama for local embeddings and answers.
 
-Created by Jean-Baptiste Thery as part of the JCode Labs toolchain.
+Created by Jean-Baptiste Thery and published under the JCode Labs npm scope.
+
+## Open Source
+
+Mimir is a public open-source project under the MIT License. It is designed to be
+inspectable, forkable, and usable without a JCode Labs account.
+
+Contributions are welcome through pull requests. Start with [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+Security reports should stay private and follow the policy in [`SECURITY.md`](./SECURITY.md).
 
 ## Status
 
-Early public package. Licensed under the MIT License.
+Early public package. APIs may evolve before `1.0.0`.
 
 ## Requirements
 
@@ -31,7 +44,7 @@ ollama pull gemma4
 
 ## Install From npm
 
-The package is public. Users do not need a JCode account or npm token to install it.
+The package is public. Users do not need a JCode Labs account or npm token to install it.
 
 With pnpm:
 
@@ -93,6 +106,46 @@ npx kb search "vendor invoice status"
 npx kb ask "What do the documents prove?"
 npx kb audit
 npx kb status
+```
+
+## Agent Skill And MCP
+
+Mimir ships with a portable agent skill and a standard MCP server.
+
+Install the agent kit into a repository:
+
+```bash
+pnpm exec kb install-skill
+```
+
+This creates:
+
+```plain text
+.mimir/skills/mimir/SKILL.md
+.mimir/mcp.json
+.mimir/README.md
+```
+
+Agents that support skill folders can load `.mimir/skills/mimir/`. Other agents can read the
+generated `.mimir/README.md` and use the MCP config snippet.
+
+Start the MCP server from the repository root:
+
+```bash
+pnpm exec kb serve-mcp
+```
+
+MCP tools exposed:
+
+- `mimir_status`
+- `mimir_search`
+- `mimir_ask`
+- `mimir_audit`
+
+Print the bundled skill path from the installed package:
+
+```bash
+pnpm exec kb skill-path
 ```
 
 ## Data Boundary

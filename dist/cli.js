@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import pc from "picocolors";
+import { loadConfig } from "./config.js";
 import { audit, ingest } from "./ingest.js";
 import { initProject } from "./init.js";
+import { serveMcp } from "./mcp.js";
 import { ask, search } from "./query.js";
+import { bundledSkillPath, installSkill } from "./skill.js";
 import { countRows } from "./store.js";
-import { loadConfig } from "./config.js";
+import { VERSION } from "./version.js";
 const program = new Command();
 program
     .name("kb")
     .description("Local-first RAG knowledge base for private project documents.")
-    .version("0.1.2");
+    .version(VERSION);
 program
     .command("init")
     .description("Create .kb config files and private/ document folder in the current repository.")
@@ -105,6 +108,31 @@ program
     console.log(`embedModel=${config.embedModel}`);
     console.log(`llmModel=${config.llmModel}`);
     console.log(`chunksIndexed=${rows}`);
+});
+program
+    .command("serve-mcp")
+    .description("Start the MCP server over stdio for Claude, Codex, and other MCP-compatible agents.")
+    .action(async () => {
+    await serveMcp(process.cwd());
+});
+program
+    .command("skill-path")
+    .description("Print the bundled Mimir skill path for agents that can load SKILL.md folders.")
+    .action(() => {
+    console.log(bundledSkillPath());
+});
+program
+    .command("install-skill")
+    .description("Copy the bundled agent skill and MCP config snippet into the current repository.")
+    .option("--target-dir <path>", "Directory where the skill folder should be copied.", ".mimir/skills")
+    .action(async (options) => {
+    const result = await installSkill({ cwd: process.cwd(), targetDir: options.targetDir });
+    console.log("Installed Mimir agent kit:");
+    for (const file of result.written) {
+        console.log(`  - ${file}`);
+    }
+    console.log(`Skill path: ${result.skillPath}`);
+    console.log(`MCP config example: ${result.mcpConfigPath}`);
 });
 await program.parseAsync(process.argv);
 function parsePositiveInt(value) {
