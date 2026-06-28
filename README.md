@@ -30,7 +30,7 @@ ollama pull gemma4
 ## Install From Git
 
 ```bash
-pnpm add -D git+ssh://git@github.com:jcode-works/jcode-knowledge-base.git
+pnpm add -D git+ssh://git@github.com/jcode-works/jcode-knowledge-base.git
 ```
 
 For local development:
