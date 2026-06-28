@@ -32,7 +32,6 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
-    "prepare": "npm run build",
     "prepack": "npm run build",
     "test": "vitest run"
   },
