@@ -62,7 +62,7 @@
   "dependencies": {
     "@lancedb/lancedb": "^0.22.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "commander": "^14.0.2",
+    "commander": "^15.0.0",
     "fast-glob": "^3.3.3",
     "html-to-text": "^9.0.5",
     "ollama": "^0.5.16",
