@@ -30,7 +30,7 @@ ollama pull gemma4
 ## Install From npm
 
 ```bash
-pnpm add -D @jcode-works/mimir
+pnpm add -D @jcode.labs/mimir
 ```
 
 ## Install From Git
@@ -130,7 +130,7 @@ Environment overrides:
 ## Library API
 
 ```ts
-import { ingest, search, ask } from "@jcode-works/mimir"
+import { ingest, search, ask } from "@jcode.labs/mimir"
 
 await ingest({ rebuild: true })
 const results = await search("vendor invoice status")

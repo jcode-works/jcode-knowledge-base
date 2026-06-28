@@ -1,5 +1,5 @@
 {
-  "name": "@jcode-works/mimir",
+  "name": "@jcode.labs/mimir",
   "version": "0.1.0",
   "description": "Local-first memory and retrieval for private project knowledge.",
   "type": "module",
