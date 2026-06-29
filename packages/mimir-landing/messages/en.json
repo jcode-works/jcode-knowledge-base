@@ -41,7 +41,7 @@
   "library_search_command": "pnpm exec mimir search \"contract renewal risk\"",
   "desktop_eyebrow": "Desktop client",
   "desktop_title": "A visual client is coming after the core is solid.",
-  "desktop_text": "The Tauri desktop app will wrap the same local-first engine for non-CLI workflows. The open-source library remains the foundation.",
+  "desktop_text": "The Tauri desktop app will wrap the same local-first engine for non-CLI workflows. It is planned for direct downloads and sideloadable installers, not app stores.",
   "desktop_cta": "Follow the core",
   "use_cases_eyebrow": "Sensitive-document workflows",
   "use_cases_title": "Use Mimir when the source material should not become someone else's dataset.",

@@ -41,7 +41,7 @@
   "library_search_command": "pnpm exec mimir search \"risque renouvellement contrat\"",
   "desktop_eyebrow": "Client desktop",
   "desktop_title": "Un client visuel arrivera quand le cœur sera solide.",
-  "desktop_text": "L'application Tauri desktop enveloppera le même moteur local-first pour les workflows sans terminal. La librairie open-source reste la fondation.",
+  "desktop_text": "L'application Tauri desktop enveloppera le même moteur local-first pour les workflows sans terminal. Elle est prévue en téléchargement direct et installateurs sideloadables, pas via les stores.",
   "desktop_cta": "Suivre le cœur",
   "use_cases_eyebrow": "Workflows documents sensibles",
   "use_cases_title": "Utilisez Mimir quand la matière source ne doit pas devenir le dataset de quelqu'un d'autre.",
