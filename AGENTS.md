@@ -50,6 +50,12 @@
 - `packages/mimir-app` is the cross-platform Tauri desktop/mobile shell. Root `pnpm build` validates
   the frontend bundle only; native `tauri build`, `tauri ios *`, and `tauri android *` commands stay
   explicit and are not part of npm release validation.
+- Distribute the Mimir app through direct downloads and sideloadable installers, not App Store or
+  Play Store flows. Desktop installers and Android APK-style distribution are first-class; iOS stays
+  deferred until a compliant non-store channel is chosen.
+- App license validation is local and per-major. Keep private signing keys out of the repository;
+  only inject the public JWK at build time through `VITE_MIMIR_LICENSE_PUBLIC_KEY_JWK`, and use
+  `packages/mimir-app` `license:keypair` / `license:issue` scripts for local license operations.
 - `packages/mimir-app/src/lib/project-registry.ts` owns the app-side local project registry. Store
   selected project roots there and derive `private/` plus `.kb/storage`; keep ingest/query/index
   truth in Mimir Core through the sidecar/CLI surface.

@@ -28,6 +28,19 @@ Rationale:
 Keep Paddle as the fallback if Lemon Squeezy cannot support the final EU VAT, licensing, or payout
 requirements. Avoid Stripe as the first choice unless JCode wants to own more tax/compliance work.
 
+## Distribution Model
+
+Distribute Mimir Desktop through direct downloads and sideloadable installers, not through App Store
+or Play Store listings. This keeps the product aligned with local-first confidential workflows and
+avoids store account, review, and revenue-share coupling.
+
+Initial channels:
+
+- macOS, Windows, and Linux direct downloads from the Mimir website or GitHub releases.
+- Android APK-style sideloading when mobile packaging is ready.
+- iOS deferred until a compliant non-store channel is selected; do not assume broad direct iOS
+  installation in product copy or release planning.
+
 ## License Model
 
 Use a perpetual per-major license:
@@ -40,10 +53,19 @@ Use a perpetual per-major license:
 The app should validate licenses locally where possible and degrade gracefully when offline. Online
 activation/checks must be explicit, scoped, and limited to license metadata.
 
+The app now has a local signed-license path:
+
+- License keys use `MIMIR1.<payload>.<signature>`.
+- Payloads target `mimir-desktop`, carry holder, tier, major version, issue date, update window, and
+  optional runtime expiration.
+- Validation happens locally with an ECDSA P-256 public JWK provided at build time through
+  `VITE_MIMIR_LICENSE_PUBLIC_KEY_JWK`.
+- Private signing keys stay outside the repository and are supplied only to
+  `pnpm --filter @jcode.labs/mimir-app license:issue`.
+
 ## Deferred Implementation
 
 - Create Lemon Squeezy product and variants.
 - Wire hosted checkout links into the landing.
 - Define webhook handling for purchases, renewals, refunds, and license events.
-- Add the app-side license activation UI.
-- Add signed license validation in the app boundary.
+- Connect provider-issued license events to the local license format.

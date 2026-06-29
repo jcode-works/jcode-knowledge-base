@@ -21,6 +21,7 @@ import {
   FolderOpen,
   FolderPlus,
   HardDrive,
+  KeyRound,
   LockKeyhole,
   MessageSquareText,
   Plus,
@@ -31,6 +32,13 @@ import {
   Volume2,
 } from "lucide-react"
 import { type DragEvent, type FormEvent, useEffect, useState } from "react"
+import {
+  clearLicenseKey,
+  type LicenseValidation,
+  loadLicenseKey,
+  saveLicenseKey,
+  validateLicenseKey,
+} from "./lib/license.js"
 import {
   type AskResult,
   type DoctorReport,
@@ -58,7 +66,12 @@ import {
   upsertProject,
 } from "./lib/project-registry.js"
 
-type View = "projects" | "retrieval" | "privacy"
+type View = "projects" | "retrieval" | "privacy" | "license"
+
+const EMPTY_LICENSE_VALIDATION: LicenseValidation = {
+  status: "empty",
+  message: "No license key is installed.",
+}
 
 export function App(): React.JSX.Element {
   const [view, setView] = useState<View>("projects")
@@ -72,7 +85,23 @@ export function App(): React.JSX.Element {
   const [askResult, setAskResult] = useState<AskResult | null>(null)
   const [securityReport, setSecurityReport] = useState<SecurityAuditReport | null>(null)
   const [statusReport, setStatusReport] = useState<StatusReport | null>(null)
+  const [licenseKeyInput, setLicenseKeyInput] = useState(() => loadLicenseKey())
+  const [licenseValidation, setLicenseValidation] =
+    useState<LicenseValidation>(EMPTY_LICENSE_VALIDATION)
+  const [isLicenseChecking, setIsLicenseChecking] = useState(false)
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? null
+
+  useEffect(() => {
+    let isCurrent = true
+    validateLicenseKey(loadLicenseKey()).then((validation) => {
+      if (isCurrent) {
+        setLicenseValidation(validation)
+      }
+    })
+    return () => {
+      isCurrent = false
+    }
+  }, [])
 
   useEffect(() => {
     saveProjects(projects)
@@ -142,6 +171,28 @@ export function App(): React.JSX.Element {
     setAskResult(null)
     setSecurityReport(null)
     setStatusReport(null)
+  }
+
+  async function handleLicenseSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault()
+    setIsLicenseChecking(true)
+    try {
+      const validation = await validateLicenseKey(licenseKeyInput)
+      setLicenseValidation(validation)
+      if (validation.status === "valid") {
+        saveLicenseKey(licenseKeyInput.trim())
+      }
+      setRuntimeMessage(validation.message)
+    } finally {
+      setIsLicenseChecking(false)
+    }
+  }
+
+  function handleClearLicense(): void {
+    clearLicenseKey()
+    setLicenseKeyInput("")
+    setLicenseValidation(EMPTY_LICENSE_VALIDATION)
+    setRuntimeMessage("License removed from local app storage.")
   }
 
   async function handleRefreshProject(project: MimirProject): Promise<void> {
@@ -349,6 +400,14 @@ export function App(): React.JSX.Element {
               <ShieldCheck aria-hidden="true" />
               Privacy audit
             </Button>
+            <Button
+              className="w-full justify-start"
+              variant={view === "license" ? "secondary" : "ghost"}
+              onClick={() => setView("license")}
+            >
+              <KeyRound aria-hidden="true" />
+              License
+            </Button>
           </nav>
 
           <div className="mt-6 rounded-lg border border-border bg-background p-4">
@@ -428,6 +487,16 @@ export function App(): React.JSX.Element {
               onRunSecurityAudit={handleSecurityAudit}
               securityReport={securityReport}
               statusReport={statusReport}
+            />
+          ) : null}
+          {view === "license" ? (
+            <LicenseView
+              isChecking={isLicenseChecking}
+              licenseKey={licenseKeyInput}
+              onClear={handleClearLicense}
+              onLicenseKeyChange={setLicenseKeyInput}
+              onSubmit={handleLicenseSubmit}
+              validation={licenseValidation}
             />
           ) : null}
         </section>
@@ -875,6 +944,92 @@ function PrivacyView({
   )
 }
 
+interface LicenseViewProps {
+  isChecking: boolean
+  licenseKey: string
+  onClear: () => void
+  onLicenseKeyChange: (licenseKey: string) => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>
+  validation: LicenseValidation
+}
+
+function LicenseView({
+  isChecking,
+  licenseKey,
+  onClear,
+  onLicenseKeyChange,
+  onSubmit,
+  validation,
+}: LicenseViewProps): React.JSX.Element {
+  return (
+    <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+      <Card className="bg-card/90">
+        <CardHeader>
+          <CardTitle>Activation</CardTitle>
+          <CardDescription>Local license validation for the desktop client.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-start justify-between gap-3 rounded-md border border-border bg-background p-4">
+            <div className="flex items-start gap-3">
+              {validation.status === "valid" ? (
+                <CheckCircle2 className="mt-1 size-4 text-success" aria-hidden="true" />
+              ) : (
+                <TriangleAlert className="mt-1 size-4 text-accent" aria-hidden="true" />
+              )}
+              <div>
+                <p className="font-semibold">{licenseStatusLabel(validation)}</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">{validation.message}</p>
+              </div>
+            </div>
+            <Badge variant={validation.status === "valid" ? "success" : "outline"}>
+              {validation.status}
+            </Badge>
+          </div>
+
+          <form className="space-y-3" onSubmit={onSubmit}>
+            <Textarea
+              aria-label="License key"
+              onChange={(event) => onLicenseKeyChange(event.currentTarget.value)}
+              placeholder="MIMIR1.payload.signature"
+              value={licenseKey}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button disabled={isChecking} type="submit">
+                <KeyRound aria-hidden="true" />
+                Activate
+              </Button>
+              <Button
+                disabled={isChecking || !licenseKey}
+                type="button"
+                variant="outline"
+                onClick={onClear}
+              >
+                Clear
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-card/90">
+        <CardHeader>
+          <CardTitle>License details</CardTitle>
+          <CardDescription>Per-major license metadata stored only in this app.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
+          {licenseDetailRows(validation).map((row) => (
+            <div className="rounded-md border border-border bg-background p-3" key={row.label}>
+              <p className="text-xs text-muted-foreground">{row.label}</p>
+              <p className="mt-1 truncate font-semibold">{row.value}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{row.detail}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 interface ControlTileProps {
   icon: React.ReactNode
   title: string
@@ -961,6 +1116,62 @@ function redactionLabel(report: SecurityAuditReport): string {
 function accessLogLabel(report: SecurityAuditReport): string {
   if (!report.accessLog.enabled) return "Disabled"
   return report.accessLog.storesRawQueries ? "Review raw query storage" : "Metadata only"
+}
+
+function licenseStatusLabel(validation: LicenseValidation): string {
+  switch (validation.status) {
+    case "valid":
+      return validation.updatesExpired ? "Activated, updates expired" : "Activated"
+    case "expired":
+      return "Expired"
+    case "unconfigured":
+      return "Validation key missing"
+    case "invalid":
+      return "Invalid"
+    case "empty":
+      return "No license"
+  }
+}
+
+function licenseDetailRows(validation: LicenseValidation): Array<{
+  label: string
+  value: string
+  detail: string
+}> {
+  if (validation.status !== "valid" && validation.status !== "expired") {
+    return [
+      { label: "Product", value: "Mimir Desktop", detail: "Per-major local validation" },
+      {
+        label: "Public key",
+        value: "Build-time config",
+        detail: "VITE_MIMIR_LICENSE_PUBLIC_KEY_JWK",
+      },
+      { label: "Storage", value: "Local app storage", detail: "No hosted account required" },
+      { label: "Mode", value: "Offline first", detail: "Signature check happens locally" },
+    ]
+  }
+
+  const payload = validation.payload
+  return [
+    { label: "Holder", value: payload.holder, detail: payload.licenseId },
+    { label: "Tier", value: payload.tier, detail: "Licensed plan" },
+    { label: "Major", value: String(payload.majorVersion), detail: "Per-major activation" },
+    {
+      label: "Updates until",
+      value: formatDate(payload.updatesUntil),
+      detail: "Included update window",
+    },
+    {
+      label: "Expiration",
+      value: payload.expiresAt ? formatDate(payload.expiresAt) : "Perpetual",
+      detail: payload.expiresAt ? "Subscription-style validity" : "No runtime expiration",
+    },
+    { label: "Issued", value: formatDate(payload.issuedAt), detail: "Signed license metadata" },
+  ]
+}
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(value))
 }
 
 function droppedProjectPath(dataTransfer: DataTransfer): string | null {

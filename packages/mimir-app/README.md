@@ -24,3 +24,38 @@ The current shell consumes JSON from `mimir doctor`, `mimir status`, `mimir inge
 `mimir ask`, `mimir security-audit`, `mimir models pull`, and offline `mimir audio` for project
 status, cited retrieval, privacy posture, explicit model preloading, Markdown reports, and local
 audio report rendering.
+
+## Distribution
+
+The app is designed for direct downloads and sideloadable installers, not App Store or Play Store
+distribution. Desktop installers and Android APK-style releases are the initial target channels; iOS
+distribution remains deferred until a compliant non-store path is selected.
+
+## Local License Validation
+
+The app validates signed per-major licenses locally. The private signing key must stay outside the
+repository.
+
+Generate a keypair into an ignored local folder:
+
+```bash
+pnpm --filter @jcode.labs/mimir-app license:keypair \
+  --private-key .mimir/license-private.jwk \
+  --public-key .mimir/license-public.jwk
+```
+
+Build the app with the public JWK only:
+
+```bash
+VITE_MIMIR_LICENSE_PUBLIC_KEY_JWK="$(cat .mimir/license-public.jwk)" pnpm --filter @jcode.labs/mimir-app build
+```
+
+Issue a license key from the private JWK:
+
+```bash
+pnpm --filter @jcode.labs/mimir-app license:issue \
+  --private-key .mimir/license-private.jwk \
+  --holder "Customer Name" \
+  --tier solo \
+  --major-version 0
+```
