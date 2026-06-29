@@ -34,6 +34,8 @@ script until a compliant non-store channel is selected.
 Before publishing a public direct download:
 
 - Run `pnpm validate` from the repository root.
+- Run `pnpm --filter @jcode.labs/mimir-app release:preflight -- --target <macos|windows|linux|android>`
+  on the matching release machine before building native artifacts.
 - Build the target platform artifact on the matching release machine or CI runner.
 - Sign macOS and Windows artifacts with release credentials that are never committed.
 - Publish checksums next to every downloadable artifact.
@@ -45,6 +47,7 @@ Before publishing a public direct download:
 
 macOS direct downloads require Apple Developer signing and notarization before public release:
 
+- Run `pnpm --filter @jcode.labs/mimir-app release:preflight -- --target macos`.
 - Install or import the Developer ID Application certificate into the release keychain.
 - Resolve the signing identity with `security find-identity -v -p codesigning`.
 - Pass the identity through `APPLE_SIGNING_IDENTITY` or the Tauri macOS signing config.
@@ -54,6 +57,7 @@ macOS direct downloads require Apple Developer signing and notarization before p
 
 Windows direct downloads require Authenticode signing before public release:
 
+- Run `pnpm --filter @jcode.labs/mimir-app release:preflight -- --target windows`.
 - Use an OV certificate first; EV is optional and mainly improves initial SmartScreen reputation.
 - Keep the certificate private key in the Windows certificate store, hardware token, or signing
   service, not in the repository.
@@ -62,7 +66,13 @@ Windows direct downloads require Authenticode signing before public release:
 - Verify the resulting NSIS/MSI signatures before publishing.
 
 Linux artifacts do not use the same platform signing flow, but published checksums are still
-required for every AppImage and Debian package.
+required for every AppImage and Debian package. Run
+`pnpm --filter @jcode.labs/mimir-app release:preflight -- --target linux` on the Linux release
+machine before `tauri:build:linux`.
+
+Android APK artifacts require an Android SDK and JDK on the release machine. Run
+`pnpm --filter @jcode.labs/mimir-app release:preflight -- --target android` before
+`tauri:android:build`.
 
 ## Updater Policy
 

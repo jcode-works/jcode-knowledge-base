@@ -17,6 +17,15 @@ pnpm --filter @jcode.labs/mimir-app tauri:android:dev
 pnpm --filter @jcode.labs/mimir-app tauri:android:build
 ```
 
+Run a release-machine preflight before native packaging:
+
+```bash
+pnpm --filter @jcode.labs/mimir-app release:preflight -- --target macos
+pnpm --filter @jcode.labs/mimir-app release:preflight -- --target windows
+pnpm --filter @jcode.labs/mimir-app release:preflight -- --target linux
+pnpm --filter @jcode.labs/mimir-app release:preflight -- --target android
+```
+
 The app uses `@jcode.labs/mimir-ui` for shared styling and should keep privacy controls visible by
 default.
 
