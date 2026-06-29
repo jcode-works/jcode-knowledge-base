@@ -1,7 +1,11 @@
+import { createRequire as _createRequire } from "module";
+const __require = _createRequire(import.meta.url);
 import { readFile } from "node:fs/promises";
 import { strFromU8, unzipSync } from "fflate";
 import { htmlToText } from "html-to-text";
+const mammoth = __require("mammoth");
 import { extractText, getDocumentProxy } from "unpdf";
+import { read as readWorkbook, utils as spreadsheetUtils } from "xlsx";
 import YAML from "yaml";
 const MAX_OFFICE_XML_ENTRY_BYTES = 25_000_000;
 export async function parseFile(file) {
@@ -54,15 +58,8 @@ export async function parseFile(file) {
     return { file, text: normalizeText(text) };
 }
 async function parseDocx(filePath) {
-    const entries = unzipOfficeFile(await readFile(filePath));
-    return xmlEntriesToText(entries, [
-        /^word\/document\.xml$/u,
-        /^word\/header\d*\.xml$/u,
-        /^word\/footer\d*\.xml$/u,
-        /^word\/footnotes\.xml$/u,
-        /^word\/endnotes\.xml$/u,
-        /^word\/comments\.xml$/u,
-    ]);
+    const result = await mammoth.extractRawText({ path: filePath });
+    return result.value;
 }
 async function parsePptx(filePath) {
     const entries = unzipOfficeFile(await readFile(filePath));
@@ -72,20 +69,22 @@ async function parsePptx(filePath) {
     ]);
 }
 async function parseXlsx(filePath) {
-    const entries = unzipOfficeFile(await readFile(filePath));
-    const sharedStrings = parseSharedStrings(entries.get("xl/sharedStrings.xml") ?? "");
-    const sheetNames = parseWorkbookSheetNames(entries);
-    const sheets = [...entries.entries()]
-        .filter(([name]) => /^xl\/worksheets\/sheet\d+\.xml$/u.test(name))
-        .sort(([a], [b]) => a.localeCompare(b));
-    const rows = [];
-    for (const [name, xml] of sheets) {
-        const values = parseSheetValues(xml, sharedStrings);
-        if (values.length > 0) {
-            rows.push(`# ${sheetNames.get(name) ?? name}`, values.join("\n"));
+    const workbook = readWorkbook(await readFile(filePath), { cellDates: true });
+    const sheets = [];
+    for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        if (!sheet) {
+            continue;
+        }
+        const rows = spreadsheetUtils
+            .sheet_to_json(sheet, { header: 1, blankrows: false, defval: "", raw: false })
+            .map(spreadsheetRowToText)
+            .filter((row) => row.some(Boolean));
+        if (rows.length > 0) {
+            sheets.push(`# ${sheetName}`, rows.map((row) => row.join("\t")).join("\n"));
         }
     }
-    return rows.join("\n\n");
+    return sheets.join("\n\n");
 }
 async function parseOpenDocument(filePath) {
     const entries = unzipOfficeFile(await readFile(filePath));
@@ -135,84 +134,6 @@ function xmlEntriesToText(entries, patterns) {
     }
     return parts.join("\n\n");
 }
-function parseSharedStrings(xml) {
-    return [...xml.matchAll(/<si\b[\s\S]*?<\/si>/gu)].map(([item]) => xmlToText(item));
-}
-function parseWorkbookSheetNames(entries) {
-    const workbook = entries.get("xl/workbook.xml") ?? "";
-    const relationships = entries.get("xl/_rels/workbook.xml.rels") ?? "";
-    const relationshipTargets = parseWorkbookRelationships(relationships);
-    const sheetNames = new Map();
-    for (const sheetMatch of workbook.matchAll(/<sheet\b([^>]*)\/?>/gu)) {
-        const attributes = sheetMatch[1] ?? "";
-        const name = readXmlAttribute(attributes, "name");
-        const relationshipId = readXmlAttribute(attributes, "r:id");
-        const target = relationshipId ? relationshipTargets.get(relationshipId) : undefined;
-        if (name && target) {
-            sheetNames.set(target, decodeXmlEntities(name));
-        }
-    }
-    return sheetNames;
-}
-function parseWorkbookRelationships(xml) {
-    const relationships = new Map();
-    for (const relationshipMatch of xml.matchAll(/<Relationship\b([^>]*)\/?>/gu)) {
-        const attributes = relationshipMatch[1] ?? "";
-        const id = readXmlAttribute(attributes, "Id");
-        const target = readXmlAttribute(attributes, "Target");
-        if (id && target) {
-            relationships.set(id, normalizeWorkbookTarget(target));
-        }
-    }
-    return relationships;
-}
-function normalizeWorkbookTarget(target) {
-    if (target.startsWith("/xl/")) {
-        return target.slice(1);
-    }
-    if (target.startsWith("xl/")) {
-        return target;
-    }
-    return `xl/${target.replace(/^\.\//u, "")}`;
-}
-function parseSheetValues(xml, sharedStrings) {
-    const rows = [];
-    for (const rowMatch of xml.matchAll(/<row\b[\s\S]*?<\/row>/gu)) {
-        const rowXml = rowMatch[0];
-        const values = [];
-        let nextColumn = 1;
-        for (const cellMatch of rowXml.matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>/gu)) {
-            const attrs = cellMatch[1] ?? "";
-            const cellXml = cellMatch[2] ?? "";
-            const reference = readXmlAttribute(attrs, "r");
-            const column = reference ? columnReferenceToIndex(reference) : nextColumn;
-            while (values.length < column - 1) {
-                values.push("");
-            }
-            values[column - 1] = parseCellValue(attrs, cellXml, sharedStrings);
-            nextColumn = column + 1;
-        }
-        const trimmed = trimTrailingEmptyValues(values);
-        if (trimmed.some(Boolean)) {
-            rows.push(trimmed.join("\t"));
-        }
-    }
-    return rows;
-}
-function parseCellValue(attrs, cellXml, sharedStrings) {
-    const inline = firstMatch(cellXml, /<is\b[\s\S]*?<\/is>/u);
-    if (inline) {
-        return xmlToText(inline);
-    }
-    const rawValue = firstMatch(cellXml, /<v>([\s\S]*?)<\/v>/u);
-    if (!rawValue) {
-        return "";
-    }
-    if (/\bt="s"/u.test(attrs)) {
-        return sharedStrings[Number.parseInt(rawValue, 10)] ?? "";
-    }
-    return decodeXmlEntities(rawValue);
-}
 function trimTrailingEmptyValues(values) {
     let end = values.length;
     while (end > 0 && values[end - 1] === "") {
@@ -220,21 +141,23 @@ function trimTrailingEmptyValues(values) {
     }
     return values.slice(0, end);
 }
-function columnReferenceToIndex(reference) {
-    const column = reference.match(/[A-Z]+/iu)?.[0].toUpperCase() ?? "";
-    let index = 0;
-    for (const char of column) {
-        index = index * 26 + char.charCodeAt(0) - 64;
+function spreadsheetRowToText(row) {
+    return trimTrailingEmptyValues(row.map(spreadsheetCellToText));
+}
+function spreadsheetCellToText(value) {
+    if (value === null || value === undefined) {
+        return "";
     }
-    return index || 1;
-}
-function readXmlAttribute(attributes, name) {
-    const escapedName = name.replace(/[-/\\^$*+?.()|[\]{}]/gu, "\\$&");
-    return firstMatch(attributes, new RegExp(`\\b${escapedName}="([^"]*)"`, "u"));
-}
-function firstMatch(input, pattern) {
-    const match = input.match(pattern);
-    return match?.[1] ?? match?.[0] ?? "";
+    if (value instanceof Date) {
+        return value.toISOString();
+    }
+    if (typeof value === "string") {
+        return value;
+    }
+    if (typeof value === "number" || typeof value === "bigint" || typeof value === "boolean") {
+        return String(value);
+    }
+    return JSON.stringify(value);
 }
 function xmlToText(xml) {
     return normalizeText(decodeXmlEntities(xml

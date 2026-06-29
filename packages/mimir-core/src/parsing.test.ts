@@ -3,6 +3,7 @@ import os from "node:os"
 import path from "node:path"
 import { strToU8, zipSync } from "fflate"
 import { afterEach, describe, expect, it } from "vitest"
+import { utils as spreadsheetUtils, write as writeWorkbook } from "xlsx"
 import { parseFile } from "./parsing.js"
 import type { SourceFile } from "./types.js"
 
@@ -21,37 +22,25 @@ describe("parseFile", () => {
     const filePath = path.join(root, "brief.docx")
     await writeFile(
       filePath,
-      zipSync({
-        "word/document.xml": strToU8(
-          "<w:document><w:body><w:p><w:r><w:t>Confidential briefing</w:t></w:r></w:p></w:body></w:document>",
-        ),
-      }),
+      createDocxPackage(
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Confidential briefing</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>Risk owner</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>',
+      ),
     )
 
     const parsed = await parseFile(sourceFile(root, filePath, ".docx"))
 
     expect(parsed.text).toContain("Confidential briefing")
+    expect(parsed.text).toContain("Risk owner")
   })
 
   it("extracts shared strings and values from xlsx files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "mimir-xlsx-"))
     tempDirs.push(root)
     const filePath = path.join(root, "dataset.xlsx")
-    await writeFile(
-      filePath,
-      zipSync({
-        "xl/sharedStrings.xml": strToU8("<sst><si><t>Invoice</t></si><si><t>Paid</t></si></sst>"),
-        "xl/workbook.xml": strToU8(
-          '<workbook><sheets><sheet name="Finance &amp; Ops" sheetId="1" r:id="rId1"/></sheets></workbook>',
-        ),
-        "xl/_rels/workbook.xml.rels": strToU8(
-          '<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>',
-        ),
-        "xl/worksheets/sheet1.xml": strToU8(
-          '<worksheet><sheetData><row><c r="A1" t="s"><v>0</v></c><c r="C1"><v>24000</v></c><c r="D1" t="s"><v>1</v></c></row></sheetData></worksheet>',
-        ),
-      }),
-    )
+    const workbook = spreadsheetUtils.book_new()
+    const sheet = spreadsheetUtils.aoa_to_sheet([["Invoice", "", 24000, "Paid"]])
+    spreadsheetUtils.book_append_sheet(workbook, sheet, "Finance & Ops")
+    await writeFile(filePath, writeWorkbook(workbook, { bookType: "xlsx", type: "buffer" }))
 
     const parsed = await parseFile(sourceFile(root, filePath, ".xlsx"))
 
@@ -86,4 +75,28 @@ function sourceFile(root: string, absolutePath: string, extension: string): Sour
     mtimeMs: 0,
     checksum: "test",
   }
+}
+
+function createDocxPackage(documentXml: string): Uint8Array {
+  return zipSync({
+    "[Content_Types].xml": strToU8(
+      [
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">',
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>',
+        '<Default Extension="xml" ContentType="application/xml"/>',
+        '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>',
+        "</Types>",
+      ].join(""),
+    ),
+    "_rels/.rels": strToU8(
+      [
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">',
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>',
+        "</Relationships>",
+      ].join(""),
+    ),
+    "word/document.xml": strToU8(documentXml),
+  })
 }

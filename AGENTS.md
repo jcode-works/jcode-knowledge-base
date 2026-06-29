@@ -104,6 +104,9 @@ General principles (KISS, DRY, YAGNI, SOLID) as applied in this codebase. Match 
 - `packages/mimir-core/src/ingest.ts` parses supported files, chunks text, embeds chunks, and rebuilds the
   local LanceDB table. Normal ingest is incremental and reuses rows whose checksum/provider/model
   still match; `--rebuild` forces a full re-index.
+- `packages/mimir-core/src/parsing.ts` uses proven parsers for high-risk Office formats:
+  Mammoth for `.docx` and SheetJS for `.xlsx`. Keep the lightweight XML ZIP parser for
+  `.pptx`, OpenDocument, and EPUB unless tests show fidelity gaps.
 - `packages/mimir-core/src/query.ts` performs hybrid retrieval (vector candidates plus bounded lexical
   BM25 scoring) and returns cited retrieval context; LLM synthesis belongs outside Mimir core.
 - `packages/mimir-core/src/mcp.ts` exposes Mimir as an MCP stdio server for agents.

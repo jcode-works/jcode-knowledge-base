@@ -903,7 +903,7 @@ core features:
 | LanceDB | Local vector storage and nearest-neighbor retrieval. |
 | MCP SDK | MCP server for compatible agents. |
 | fast-glob | Safe source-file discovery. |
-| unpdf, html-to-text, yaml, fflate | Document parsing for PDF, HTML, YAML, Office/OpenDocument ZIP files. |
+| unpdf, mammoth, xlsx, html-to-text, yaml, fflate | Document parsing for PDF, Office, HTML, YAML, OpenDocument, and EPUB files. |
 | commander, zod, picocolors | CLI, config validation, readable terminal output. |
 
 Removing more dependencies is possible only by dropping features or replacing them with smaller
