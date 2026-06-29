@@ -96,6 +96,8 @@ export interface StatusReport {
   ingestConcurrency: number
   embeddingBatchSize: number
   includeExtensions: string[]
+  pdfOcrCommand: string[]
+  pdfOcrTimeoutMs: number
   chunksIndexed: number
 }
 
@@ -345,6 +347,8 @@ function isStatusReport(value: unknown): value is StatusReport {
     typeof value.ingestConcurrency === "number" &&
     typeof value.embeddingBatchSize === "number" &&
     isStringArray(value.includeExtensions) &&
+    isStringArray(value.pdfOcrCommand) &&
+    typeof value.pdfOcrTimeoutMs === "number" &&
     typeof value.chunksIndexed === "number"
   )
 }

@@ -45,6 +45,8 @@ export async function serveMcp(cwd = resolveMcpProjectRoot()): Promise<void> {
         ingestConcurrency: config.ingestConcurrency,
         embeddingBatchSize: config.embeddingBatchSize,
         includeExtensions: config.includeExtensions,
+        pdfOcrCommand: config.pdfOcrCommand,
+        pdfOcrTimeoutMs: config.pdfOcrTimeoutMs,
         chunksIndexed,
       }
 

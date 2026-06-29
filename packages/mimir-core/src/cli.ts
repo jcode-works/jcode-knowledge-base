@@ -309,6 +309,8 @@ program
       ingestConcurrency: config.ingestConcurrency,
       embeddingBatchSize: config.embeddingBatchSize,
       includeExtensions: config.includeExtensions,
+      pdfOcrCommand: config.pdfOcrCommand,
+      pdfOcrTimeoutMs: config.pdfOcrTimeoutMs,
       chunksIndexed: rows,
     }
     if (options.json) {
@@ -335,6 +337,8 @@ program
     console.log(`ingestConcurrency=${config.ingestConcurrency}`)
     console.log(`embeddingBatchSize=${config.embeddingBatchSize}`)
     console.log(`includeExtensions=${config.includeExtensions.join(",")}`)
+    console.log(`pdfOcrCommand=${config.pdfOcrCommand.join(" ")}`)
+    console.log(`pdfOcrTimeoutMs=${config.pdfOcrTimeoutMs}`)
     console.log(`chunksIndexed=${rows}`)
   })
 

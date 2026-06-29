@@ -46,6 +46,22 @@ pnpm exec mimir audit --unsupported
 Then either convert them to a supported format, OCR/transcribe them, or add a safe custom UTF-8 text
 extension with `includeExtensions` / `KB_INCLUDE_EXTENSIONS`.
 
+## Scanned PDFs Produce No Text
+
+Mimir extracts embedded PDF text by default. For scanned/image-only PDFs, configure an explicit local
+OCR wrapper that prints UTF-8 text to stdout:
+
+```json
+{
+  "pdfOcrCommand": ["mimir-pdf-ocr", "{input}"],
+  "pdfOcrTimeoutMs": 120000
+}
+```
+
+The command runs only when normal PDF extraction returns no text. It is executed without a shell,
+receives `MIMIR_PDF_PATH`, and may use `{input}` in its arguments for the PDF path. Keep OCR tooling
+local for confidential documents.
+
 ## Search Returns Weak Results
 
 The default `local-hash` provider is dependency-light and offline, but it is lexical/hash retrieval,

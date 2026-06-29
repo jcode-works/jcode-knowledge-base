@@ -40,6 +40,8 @@ describe("loadConfig", () => {
     expect(config.accessLog).toBe(true)
     expect(config.mcpMaxTopK).toBe(10)
     expect(config.includeExtensions).toEqual([])
+    expect(config.pdfOcrCommand).toEqual([])
+    expect(config.pdfOcrTimeoutMs).toBe(120_000)
   })
 
   it("normalizes custom text extensions from config and env", async () => {
@@ -115,6 +117,41 @@ describe("loadConfig", () => {
         delete process.env.KB_TRANSFORMERS_ALLOW_REMOTE_MODELS
       } else {
         process.env.KB_TRANSFORMERS_ALLOW_REMOTE_MODELS = originalRemoteModels
+      }
+    }
+  })
+
+  it("loads optional PDF OCR command from config and env", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "jcode-kb-"))
+    tempDirs.push(root)
+    await mkdir(path.join(root, ".kb"), { recursive: true })
+    await writeFile(
+      path.join(root, ".kb/config.json"),
+      JSON.stringify({
+        pdfOcrCommand: ["ocr-wrapper", "{input}"],
+        pdfOcrTimeoutMs: 30_000,
+      }),
+      "utf8",
+    )
+
+    const originalCommand = process.env.KB_PDF_OCR_COMMAND
+    const originalTimeout = process.env.KB_PDF_OCR_TIMEOUT_MS
+    process.env.KB_PDF_OCR_COMMAND = JSON.stringify(["env-ocr-wrapper"])
+    process.env.KB_PDF_OCR_TIMEOUT_MS = "45000"
+    try {
+      const config = await loadConfig(root)
+      expect(config.pdfOcrCommand).toEqual(["env-ocr-wrapper"])
+      expect(config.pdfOcrTimeoutMs).toBe(45_000)
+    } finally {
+      if (originalCommand === undefined) {
+        delete process.env.KB_PDF_OCR_COMMAND
+      } else {
+        process.env.KB_PDF_OCR_COMMAND = originalCommand
+      }
+      if (originalTimeout === undefined) {
+        delete process.env.KB_PDF_OCR_TIMEOUT_MS
+      } else {
+        process.env.KB_PDF_OCR_TIMEOUT_MS = originalTimeout
       }
     }
   })

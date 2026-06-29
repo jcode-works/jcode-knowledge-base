@@ -37,6 +37,8 @@ export function testConfig(
     ingestConcurrency: DEFAULT_CONFIG.ingestConcurrency,
     embeddingBatchSize: DEFAULT_CONFIG.embeddingBatchSize,
     includeExtensions: [...DEFAULT_CONFIG.includeExtensions],
+    pdfOcrCommand: [...DEFAULT_CONFIG.pdfOcrCommand],
+    pdfOcrTimeoutMs: DEFAULT_CONFIG.pdfOcrTimeoutMs,
   }
 
   return { ...config, ...configOverrides }

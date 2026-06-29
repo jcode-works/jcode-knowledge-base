@@ -77,6 +77,8 @@
 - Ingestion must be explicit about files it did not index. Preserve `mimir audit --unsupported`,
   unsupported-extension summaries, secret-like file skipping, max file size limits, and checksum-based
   stale detection.
+- PDF OCR is opt-in only. Keep OCR behind `pdfOcrCommand` / `KB_PDF_OCR_COMMAND`, execute it without
+  a shell, require stdout text, and do not add heavy OCR dependencies or claim universal scan support.
 - Keep the repository as a simple pnpm workspace monorepo. Add Turbo only if multiple packages or
   apps start needing task caching/orchestration beyond `pnpm --filter`.
 - Keep Mimir core free of Ollama. `embeddingProvider: "local-hash"` supports ingestion, search, MCP,

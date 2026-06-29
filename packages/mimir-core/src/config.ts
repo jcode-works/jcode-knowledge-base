@@ -42,6 +42,8 @@ const rawConfigSchema = z.object({
   ingestConcurrency: z.number().int().positive().default(DEFAULT_CONFIG.ingestConcurrency),
   embeddingBatchSize: z.number().int().positive().default(DEFAULT_CONFIG.embeddingBatchSize),
   includeExtensions: z.array(z.string().min(1)).default(DEFAULT_CONFIG.includeExtensions),
+  pdfOcrCommand: z.array(z.string().min(1)).default(DEFAULT_CONFIG.pdfOcrCommand),
+  pdfOcrTimeoutMs: z.number().int().positive().default(DEFAULT_CONFIG.pdfOcrTimeoutMs),
 })
 
 type RawConfig = z.infer<typeof rawConfigSchema>
@@ -95,6 +97,8 @@ export async function loadConfig(start = process.cwd()): Promise<Config> {
     ingestConcurrency: withEnv.ingestConcurrency,
     embeddingBatchSize: withEnv.embeddingBatchSize,
     includeExtensions: normalizeExtensions(withEnv.includeExtensions),
+    pdfOcrCommand: withEnv.pdfOcrCommand,
+    pdfOcrTimeoutMs: withEnv.pdfOcrTimeoutMs,
   }
 }
 
@@ -130,6 +134,8 @@ function applyEnv(config: RawConfig): RawConfig {
     ingestConcurrency: readPositiveIntEnv("KB_INGEST_CONCURRENCY", config.ingestConcurrency),
     embeddingBatchSize: readPositiveIntEnv("KB_EMBEDDING_BATCH_SIZE", config.embeddingBatchSize),
     includeExtensions: readExtensionsEnv("KB_INCLUDE_EXTENSIONS", config.includeExtensions),
+    pdfOcrCommand: readJsonStringArrayEnv("KB_PDF_OCR_COMMAND", config.pdfOcrCommand),
+    pdfOcrTimeoutMs: readPositiveIntEnv("KB_PDF_OCR_TIMEOUT_MS", config.pdfOcrTimeoutMs),
   }
 }
 
@@ -187,4 +193,20 @@ function readExtensionsEnv(name: string, fallback: string[]): string[] {
     return fallback
   }
   return raw.split(",")
+}
+
+function readJsonStringArrayEnv(name: string, fallback: string[]): string[] {
+  const raw = process.env[name]
+  if (!raw) {
+    return fallback
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    return Array.isArray(parsed) &&
+      parsed.every((value) => typeof value === "string" && value.length > 0)
+      ? parsed
+      : fallback
+  } catch {
+    return fallback
+  }
 }

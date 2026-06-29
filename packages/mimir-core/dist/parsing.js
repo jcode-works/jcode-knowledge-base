@@ -1,5 +1,6 @@
 import { createRequire as _createRequire } from "module";
 const __require = _createRequire(import.meta.url);
+import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { strFromU8, unzipSync } from "fflate";
 import { htmlToText } from "html-to-text";
@@ -8,11 +9,12 @@ import { extractText, getDocumentProxy } from "unpdf";
 import { read as readWorkbook, utils as spreadsheetUtils } from "xlsx";
 import YAML from "yaml";
 const MAX_OFFICE_XML_ENTRY_BYTES = 25_000_000;
-export async function parseFile(file) {
+const MAX_OCR_STDIO_BYTES = 25_000_000;
+export async function parseFile(file, options = {}) {
     let text;
     switch (file.extension) {
         case ".pdf":
-            text = await parsePdf(file.absolutePath);
+            text = await parsePdf(file.absolutePath, options);
             break;
         case ".docx":
             text = await parseDocx(file.absolutePath);
@@ -182,11 +184,80 @@ function decodeXmlEntities(input) {
         .replace(/&apos;/gu, "'")
         .replace(/&amp;/gu, "&");
 }
-async function parsePdf(filePath) {
+async function parsePdf(filePath, options) {
     const buffer = await readFile(filePath);
     const pdf = await getDocumentProxy(new Uint8Array(buffer));
     const result = await extractText(pdf, { mergePages: true });
-    return result.text;
+    if (normalizeText(result.text)) {
+        return result.text;
+    }
+    if (!options.pdfOcrCommand || options.pdfOcrCommand.length === 0) {
+        return result.text;
+    }
+    return runPdfOcr(filePath, options);
+}
+async function runPdfOcr(filePath, options) {
+    const command = options.pdfOcrCommand ?? [];
+    const [executable, ...configuredArgs] = command;
+    if (!executable) {
+        return "";
+    }
+    const hasInputPlaceholder = command.some((part) => part.includes("{input}"));
+    const args = configuredArgs.map((part) => part.replaceAll("{input}", filePath));
+    if (!hasInputPlaceholder) {
+        args.push(filePath);
+    }
+    return new Promise((resolve, reject) => {
+        const child = spawn(executable, args, {
+            env: { ...process.env, MIMIR_PDF_PATH: filePath },
+            stdio: ["ignore", "pipe", "pipe"],
+        });
+        let stdout = "";
+        let stderr = "";
+        let didTimeout = false;
+        let outputTooLarge = false;
+        const timeout = setTimeout(() => {
+            didTimeout = true;
+            child.kill("SIGTERM");
+        }, options.pdfOcrTimeoutMs ?? 120_000);
+        child.stdout.setEncoding("utf8");
+        child.stderr.setEncoding("utf8");
+        child.stdout.on("data", (chunk) => {
+            stdout += chunk;
+            if (Buffer.byteLength(stdout, "utf8") > MAX_OCR_STDIO_BYTES) {
+                outputTooLarge = true;
+                child.kill("SIGTERM");
+            }
+        });
+        child.stderr.on("data", (chunk) => {
+            stderr += chunk;
+            if (Buffer.byteLength(stderr, "utf8") > MAX_OCR_STDIO_BYTES) {
+                outputTooLarge = true;
+                child.kill("SIGTERM");
+            }
+        });
+        child.on("error", (error) => {
+            clearTimeout(timeout);
+            reject(new Error(`PDF OCR command failed to start: ${error.message}`));
+        });
+        child.on("close", (code) => {
+            clearTimeout(timeout);
+            if (didTimeout) {
+                reject(new Error("PDF OCR command timed out."));
+                return;
+            }
+            if (outputTooLarge) {
+                reject(new Error("PDF OCR command produced too much output."));
+                return;
+            }
+            if (code !== 0) {
+                const detail = stderr.trim();
+                reject(new Error(detail ? `PDF OCR command failed: ${detail}` : "PDF OCR command failed."));
+                return;
+            }
+            resolve(stdout);
+        });
+    });
 }
 function normalizeText(input) {
     return input

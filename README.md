@@ -468,10 +468,10 @@ Or through:
 KB_INCLUDE_EXTENSIONS=".transcript,.evidence" pnpm exec mimir ingest
 ```
 
-Images, scans, audio/video files, old proprietary Office binaries such as `.doc`, and other formats
-that are not listed should be OCRed, transcribed, converted, or exported to text/PDF/HTML first.
-Mimir intentionally avoids pretending that every binary format can be indexed safely without
-extraction logic.
+Images, audio/video files, old proprietary Office binaries such as `.doc`, and other formats that are
+not listed should be transcribed, converted, or exported to text/PDF/HTML first. Scanned PDFs can use
+an explicit `pdfOcrCommand` wrapper when you accept running local OCR tooling. Mimir intentionally
+avoids pretending that every binary format can be indexed safely without extraction logic.
 
 Secret-like files such as `.env`, `.npmrc`, private keys, and certificates are skipped by default.
 Convert safe examples to a normal text format before ingestion.
@@ -508,7 +508,9 @@ Default `.kb/config.json`:
   "maxFileBytes": 50000000,
   "ingestConcurrency": 4,
   "embeddingBatchSize": 32,
-  "includeExtensions": []
+  "includeExtensions": [],
+  "pdfOcrCommand": [],
+  "pdfOcrTimeoutMs": 120000
 }
 ```
 
@@ -533,6 +535,12 @@ Environment overrides:
 - `KB_INGEST_CONCURRENCY`
 - `KB_EMBEDDING_BATCH_SIZE`
 - `KB_INCLUDE_EXTENSIONS`
+- `KB_PDF_OCR_COMMAND` as a JSON array, for example `["mimir-pdf-ocr","{input}"]`
+- `KB_PDF_OCR_TIMEOUT_MS`
+
+`pdfOcrCommand` is opt-in and only runs when normal PDF text extraction returns no text. The command
+is executed without a shell, receives `MIMIR_PDF_PATH`, replaces `{input}` placeholders with the PDF
+path, and must print UTF-8 text to stdout.
 
 ## CLI Reference
 

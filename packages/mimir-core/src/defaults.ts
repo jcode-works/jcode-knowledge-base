@@ -34,4 +34,6 @@ export const DEFAULT_CONFIG: Omit<Config, "projectRoot"> = {
   ingestConcurrency: 4,
   embeddingBatchSize: 32,
   includeExtensions: [],
+  pdfOcrCommand: [],
+  pdfOcrTimeoutMs: 120_000,
 }

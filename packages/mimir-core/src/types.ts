@@ -22,6 +22,8 @@ export interface Config {
   ingestConcurrency: number
   embeddingBatchSize: number
   includeExtensions: string[]
+  pdfOcrCommand: string[]
+  pdfOcrTimeoutMs: number
 }
 
 export type EmbeddingProvider = "local-hash" | "transformers"

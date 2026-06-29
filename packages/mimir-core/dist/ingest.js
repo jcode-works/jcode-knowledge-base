@@ -24,7 +24,7 @@ export async function ingest(options = {}) {
     let emptyFiles = 0;
     const results = await mapLimit(filesToIndex, config.ingestConcurrency, async (file) => {
         try {
-            const parsed = await parseFile(file);
+            const parsed = await parseFile(file, config);
             const redacted = redactText(parsed.text, config);
             const chunks = chunkDocument({ ...parsed, text: redacted.text }, config.chunkSize, config.chunkOverlap);
             return { chunks, redactions: redacted.counts, error: null };

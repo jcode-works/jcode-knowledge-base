@@ -30,5 +30,7 @@ export const DEFAULT_CONFIG = {
     ingestConcurrency: 4,
     embeddingBatchSize: 32,
     includeExtensions: [],
+    pdfOcrCommand: [],
+    pdfOcrTimeoutMs: 120_000,
 };
 //# sourceMappingURL=defaults.js.map

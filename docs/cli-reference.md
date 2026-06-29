@@ -60,3 +60,18 @@ Mimir ships two CLIs:
 | `--offline` | `audio`, `mimir-tts render` | Disable remote model downloads and force the local Transformers.js path. |
 | `--allow-remote-models` | `audio`, `mimir-tts render` | Explicitly allow model downloads for Transformers.js. |
 | `--engine edge` | `audio`, `mimir-tts render` | Use online Edge TTS for MP3 output. |
+
+## OCR Configuration
+
+PDF OCR is intentionally configuration-based rather than a default CLI flag. Add a local wrapper that
+prints OCR text to stdout:
+
+```json
+{
+  "pdfOcrCommand": ["mimir-pdf-ocr", "{input}"],
+  "pdfOcrTimeoutMs": 120000
+}
+```
+
+Or set `KB_PDF_OCR_COMMAND` to a JSON array. Mimir only invokes it for PDFs where embedded-text
+extraction returns no text.

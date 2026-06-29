@@ -39,6 +39,8 @@ export async function serveMcp(cwd = resolveMcpProjectRoot()) {
             ingestConcurrency: config.ingestConcurrency,
             embeddingBatchSize: config.embeddingBatchSize,
             includeExtensions: config.includeExtensions,
+            pdfOcrCommand: config.pdfOcrCommand,
+            pdfOcrTimeoutMs: config.pdfOcrTimeoutMs,
             chunksIndexed,
         };
         return textResult(output);
