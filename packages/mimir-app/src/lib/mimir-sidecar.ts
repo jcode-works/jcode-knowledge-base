@@ -74,6 +74,29 @@ export interface AskResult {
   sources: SearchResult[]
 }
 
+export interface StatusReport {
+  projectRoot: string
+  rawDir: string
+  storageDir: string
+  sourcesFile: string
+  accessLogPath: string
+  embeddingModelPath: string
+  embeddingProvider: "local-hash" | "transformers"
+  embeddingModel: string
+  transformersAllowRemoteModels: boolean
+  redactionEnabled: boolean
+  accessLog: boolean
+  mcpMaxTopK: number
+  topK: number
+  chunkSize: number
+  chunkOverlap: number
+  maxFileBytes: number
+  ingestConcurrency: number
+  embeddingBatchSize: number
+  includeExtensions: string[]
+  chunksIndexed: number
+}
+
 export interface SecurityAuditReport {
   projectRoot: string
   zeroTelemetry: true
@@ -112,6 +135,11 @@ export interface SecurityAuditReport {
   warnings: string[]
 }
 
+export interface ModelsPullResult {
+  embeddingModel: string
+  embeddingModelPath: string
+}
+
 interface SetupResult {
   doctor: DoctorReport
 }
@@ -147,6 +175,18 @@ export async function runAsk(
     request.topK = topK
   }
   return runJsonCommand(request, isAskResult, "ask result", { allowNonZero: true })
+}
+
+export async function runStatus(projectRoot: string): Promise<StatusReport> {
+  return runJsonCommand({ projectRoot, command: "status" }, isStatusReport, "status report")
+}
+
+export async function runModelsPull(projectRoot: string): Promise<ModelsPullResult> {
+  return runJsonCommand(
+    { projectRoot, command: "models-pull" },
+    isModelsPullResult,
+    "models pull result",
+  )
 }
 
 export async function runSecurityAudit(projectRoot: string): Promise<SecurityAuditReport> {
@@ -254,6 +294,40 @@ function isAskResult(value: unknown): value is AskResult {
     typeof value.answer === "string" &&
     Array.isArray(value.sources) &&
     value.sources.every(isSearchResult)
+  )
+}
+
+function isStatusReport(value: unknown): value is StatusReport {
+  return (
+    isRecord(value) &&
+    typeof value.projectRoot === "string" &&
+    typeof value.rawDir === "string" &&
+    typeof value.storageDir === "string" &&
+    typeof value.sourcesFile === "string" &&
+    typeof value.accessLogPath === "string" &&
+    typeof value.embeddingModelPath === "string" &&
+    isEmbeddingProvider(value.embeddingProvider) &&
+    typeof value.embeddingModel === "string" &&
+    typeof value.transformersAllowRemoteModels === "boolean" &&
+    typeof value.redactionEnabled === "boolean" &&
+    typeof value.accessLog === "boolean" &&
+    typeof value.mcpMaxTopK === "number" &&
+    typeof value.topK === "number" &&
+    typeof value.chunkSize === "number" &&
+    typeof value.chunkOverlap === "number" &&
+    typeof value.maxFileBytes === "number" &&
+    typeof value.ingestConcurrency === "number" &&
+    typeof value.embeddingBatchSize === "number" &&
+    isStringArray(value.includeExtensions) &&
+    typeof value.chunksIndexed === "number"
+  )
+}
+
+function isModelsPullResult(value: unknown): value is ModelsPullResult {
+  return (
+    isRecord(value) &&
+    typeof value.embeddingModel === "string" &&
+    typeof value.embeddingModelPath === "string"
   )
 }
 

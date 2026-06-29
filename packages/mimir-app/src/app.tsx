@@ -15,6 +15,8 @@ import {
   Brain,
   CheckCircle2,
   Database,
+  Download,
+  ExternalLink,
   FileSearch,
   FolderOpen,
   FolderPlus,
@@ -34,11 +36,15 @@ import {
   runAsk,
   runDoctor,
   runIngest,
+  runModelsPull,
   runSecurityAudit,
+  runStatus,
   type SecurityAuditReport,
+  type StatusReport,
 } from "./lib/mimir-sidecar.js"
 import {
   createProject,
+  joinProjectPath,
   loadActiveProjectId,
   loadProjects,
   type MimirProject,
@@ -52,12 +58,6 @@ import {
 
 type View = "projects" | "retrieval" | "privacy"
 
-const modelRows = [
-  { label: "Provider", value: "Transformers.js", detail: "Semantic retrieval" },
-  { label: "Embedding model", value: "Configured per project", detail: ".kb/config.json" },
-  { label: "Fallback", value: "Local hash", detail: "No model runtime" },
-]
-
 export function App(): React.JSX.Element {
   const [view, setView] = useState<View>("projects")
   const [projects, setProjects] = useState<MimirProject[]>(() => loadProjects())
@@ -69,6 +69,7 @@ export function App(): React.JSX.Element {
   const [question, setQuestion] = useState("")
   const [askResult, setAskResult] = useState<AskResult | null>(null)
   const [securityReport, setSecurityReport] = useState<SecurityAuditReport | null>(null)
+  const [statusReport, setStatusReport] = useState<StatusReport | null>(null)
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? null
 
   useEffect(() => {
@@ -107,14 +108,29 @@ export function App(): React.JSX.Element {
 
   function handleDrop(event: DragEvent<HTMLButtonElement>): void {
     event.preventDefault()
+    const droppedPath = droppedProjectPath(event.dataTransfer)
+    if (droppedPath) {
+      try {
+        registerProject(droppedPath)
+      } catch (error) {
+        setDropStatus(error instanceof Error ? error.message : "Dropped project path is invalid.")
+      }
+      return
+    }
+
     const itemCount = event.dataTransfer.items.length || event.dataTransfer.files.length
-    setDropStatus(`${itemCount} local item${itemCount === 1 ? "" : "s"} detected.`)
+    setDropStatus(
+      itemCount > 0
+        ? `${itemCount} local item${itemCount === 1 ? "" : "s"} detected. Paste the absolute folder path if the native shell did not expose it.`
+        : "Paste the absolute folder path when the native shell does not expose drag-drop paths.",
+    )
   }
 
   function handleRemoveProject(projectId: string): void {
     if (projectId === activeProjectId) {
       setAskResult(null)
       setSecurityReport(null)
+      setStatusReport(null)
     }
     setProjects((currentProjects) => removeProject(currentProjects, projectId))
   }
@@ -123,12 +139,17 @@ export function App(): React.JSX.Element {
     setActiveProjectId(projectId)
     setAskResult(null)
     setSecurityReport(null)
+    setStatusReport(null)
   }
 
   async function handleRefreshProject(project: MimirProject): Promise<void> {
     await runProjectCommand("Refreshing project status", project, async () => {
-      const report = await runDoctor(project.projectRoot)
+      const [report, status] = await Promise.all([
+        runDoctor(project.projectRoot),
+        runStatus(project.projectRoot),
+      ])
       updateProjectFromDoctor(project, report)
+      setStatusReport(status)
       setRuntimeMessage(
         report.ready ? "Project is ready." : (report.nextSteps.at(0) ?? "Review project status."),
       )
@@ -138,7 +159,9 @@ export function App(): React.JSX.Element {
   async function handleRepairProject(project: MimirProject): Promise<void> {
     await runProjectCommand("Running safe repair", project, async () => {
       const report = await runDoctor(project.projectRoot, true)
+      const status = await runStatus(project.projectRoot)
       updateProjectFromDoctor(project, report)
+      setStatusReport(status)
       setRuntimeMessage(
         report.ready
           ? "Repair complete. Project is ready."
@@ -151,8 +174,12 @@ export function App(): React.JSX.Element {
     replaceProject({ ...project, status: "indexing", progress: Math.max(project.progress, 35) })
     await runProjectCommand("Ingesting project documents", project, async () => {
       const ingestResult = await runIngest(project.projectRoot)
-      const report = await runDoctor(project.projectRoot)
+      const [report, status] = await Promise.all([
+        runDoctor(project.projectRoot),
+        runStatus(project.projectRoot),
+      ])
       updateProjectFromDoctor(project, report)
+      setStatusReport(status)
       setRuntimeMessage(
         `Ingest complete: ${ingestResult.indexedFiles} indexed files, ${ingestResult.chunks} chunks.`,
       )
@@ -181,6 +208,20 @@ export function App(): React.JSX.Element {
     })
   }
 
+  async function handlePullModels(): Promise<void> {
+    if (!activeProject) {
+      setRuntimeMessage("Select a project before preloading the embedding model.")
+      return
+    }
+
+    await runProjectCommand("Preloading embedding model", activeProject, async () => {
+      const model = await runModelsPull(activeProject.projectRoot)
+      const status = await runStatus(activeProject.projectRoot)
+      setStatusReport(status)
+      setRuntimeMessage(`Embedding model ready: ${model.embeddingModel}.`)
+    })
+  }
+
   async function handleSecurityAudit(): Promise<void> {
     if (!activeProject) {
       setRuntimeMessage("Select a project before running the privacy audit.")
@@ -188,8 +229,12 @@ export function App(): React.JSX.Element {
     }
 
     await runProjectCommand("Running privacy audit", activeProject, async () => {
-      const report = await runSecurityAudit(activeProject.projectRoot)
+      const [report, status] = await Promise.all([
+        runSecurityAudit(activeProject.projectRoot),
+        runStatus(activeProject.projectRoot),
+      ])
       setSecurityReport(report)
+      setStatusReport(status)
       setRuntimeMessage(
         report.warnings.length === 0
           ? "Privacy audit passed."
@@ -316,10 +361,12 @@ export function App(): React.JSX.Element {
           {view === "projects" ? (
             <ProjectsView
               activeProjectId={activeProjectId}
+              activeProject={activeProject}
               dropStatus={dropStatus}
               isRunning={isRunning}
               onDrop={handleDrop}
               onIngestProject={handleIngestProject}
+              onPullModels={handlePullModels}
               onProjectRootChange={setProjectRoot}
               onProjectSubmit={handleProjectSubmit}
               onRefreshProject={handleRefreshProject}
@@ -328,6 +375,7 @@ export function App(): React.JSX.Element {
               onSelectProject={selectProject}
               projectRoot={projectRoot}
               projects={projects}
+              statusReport={statusReport}
             />
           ) : null}
           {view === "retrieval" ? (
@@ -346,6 +394,7 @@ export function App(): React.JSX.Element {
               isRunning={isRunning}
               onRunSecurityAudit={handleSecurityAudit}
               securityReport={securityReport}
+              statusReport={statusReport}
             />
           ) : null}
         </section>
@@ -356,10 +405,12 @@ export function App(): React.JSX.Element {
 
 interface ProjectsViewProps {
   activeProjectId: string | null
+  activeProject: MimirProject | null
   dropStatus: string
   isRunning: boolean
   onDrop: (event: DragEvent<HTMLButtonElement>) => void
   onIngestProject: (project: MimirProject) => Promise<void>
+  onPullModels: () => Promise<void>
   onProjectRootChange: (projectRoot: string) => void
   onProjectSubmit: (event: FormEvent<HTMLFormElement>) => void
   onRefreshProject: (project: MimirProject) => Promise<void>
@@ -368,14 +419,17 @@ interface ProjectsViewProps {
   onSelectProject: (projectId: string) => void
   projectRoot: string
   projects: MimirProject[]
+  statusReport: StatusReport | null
 }
 
 function ProjectsView({
   activeProjectId,
+  activeProject,
   dropStatus,
   isRunning,
   onDrop,
   onIngestProject,
+  onPullModels,
   onProjectRootChange,
   onProjectSubmit,
   onRefreshProject,
@@ -384,7 +438,10 @@ function ProjectsView({
   onSelectProject,
   projectRoot,
   projects,
+  statusReport,
 }: ProjectsViewProps): React.JSX.Element {
+  const modelRows = modelStatusRows(statusReport)
+
   return (
     <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
       <Card className="bg-card/90">
@@ -510,14 +567,36 @@ function ProjectsView({
             </p>
           </button>
 
-          <div className="grid gap-3 md:grid-cols-3">
-            {modelRows.map((row) => (
-              <div className="rounded-md border border-border bg-background p-3" key={row.label}>
-                <p className="text-xs text-muted-foreground">{row.label}</p>
-                <p className="mt-1 font-semibold">{row.value}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{row.detail}</p>
+          <div className="rounded-lg border border-border bg-background p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold">Embedding model</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  {activeProject
+                    ? "Preload the configured Transformers.js model before confidential indexing."
+                    : "Select a project to inspect and preload its configured model."}
+                </p>
               </div>
-            ))}
+              <Button
+                disabled={!activeProject || isRunning}
+                size="sm"
+                type="button"
+                variant="outline"
+                onClick={onPullModels}
+              >
+                <Download aria-hidden="true" />
+                Preload
+              </Button>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {modelRows.map((row) => (
+                <div className="rounded-md border border-border bg-card p-3" key={row.label}>
+                  <p className="text-xs text-muted-foreground">{row.label}</p>
+                  <p className="mt-1 truncate font-semibold">{row.value}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{row.detail}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -583,22 +662,40 @@ function RetrievalView({
         </CardHeader>
         <CardContent className="space-y-3">
           {askResult && askResult.sources.length > 0 ? (
-            askResult.sources.map((source, index) => (
-              <div
-                className="rounded-md border border-border bg-background p-4"
-                key={`${source.relativePath}-${source.chunkIndex}`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="truncate text-sm font-semibold">
-                    [{index + 1}] {source.relativePath}
+            askResult.sources.map((source, index) => {
+              const sourceUrl = activeProject ? sourceFileUrl(activeProject, source) : null
+
+              return (
+                <div
+                  className="rounded-md border border-border bg-background p-4"
+                  key={`${source.relativePath}-${source.chunkIndex}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    {sourceUrl ? (
+                      <a
+                        className="flex min-w-0 items-center gap-2 truncate text-sm font-semibold outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
+                        href={sourceUrl}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        <span className="truncate">
+                          [{index + 1}] {source.relativePath}
+                        </span>
+                        <ExternalLink className="size-3.5 shrink-0" aria-hidden="true" />
+                      </a>
+                    ) : (
+                      <p className="truncate text-sm font-semibold">
+                        [{index + 1}] {source.relativePath}
+                      </p>
+                    )}
+                    <Badge variant="outline">chunk {source.chunkIndex}</Badge>
+                  </div>
+                  <p className="mt-3 line-clamp-5 text-sm leading-6 text-muted-foreground">
+                    {source.text}
                   </p>
-                  <Badge variant="outline">chunk {source.chunkIndex}</Badge>
                 </div>
-                <p className="mt-3 line-clamp-5 text-sm leading-6 text-muted-foreground">
-                  {source.text}
-                </p>
-              </div>
-            ))
+              )
+            })
           ) : (
             <div className="rounded-md border border-dashed border-border bg-background p-5 text-sm text-muted-foreground">
               {activeProject
@@ -616,6 +713,7 @@ interface PrivacyViewProps extends ProjectPanelProps {
   isRunning: boolean
   onRunSecurityAudit: () => Promise<void>
   securityReport: SecurityAuditReport | null
+  statusReport: StatusReport | null
 }
 
 function PrivacyView({
@@ -623,6 +721,7 @@ function PrivacyView({
   isRunning,
   onRunSecurityAudit,
   securityReport,
+  statusReport,
 }: PrivacyViewProps): React.JSX.Element {
   const auditRows = privacyRows(activeProject, securityReport)
 
@@ -669,7 +768,7 @@ function PrivacyView({
       <Card className="bg-card/90">
         <CardHeader>
           <CardTitle>Controls</CardTitle>
-          <CardDescription>Visible defaults before native execution is enabled.</CardDescription>
+          <CardDescription>Visible local controls for the active workspace.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           <ControlTile
@@ -686,7 +785,16 @@ function PrivacyView({
           <ControlTile
             icon={<Brain aria-hidden="true" />}
             title="Models"
-            value={securityReport?.providers.embeddingModel ?? "Explicit preload"}
+            value={
+              statusReport
+                ? `${modelProviderLabel(statusReport.embeddingProvider)} / ${statusReport.embeddingModel}`
+                : (securityReport?.providers.embeddingModel ?? "Explicit preload")
+            }
+          />
+          <ControlTile
+            icon={<Activity aria-hidden="true" />}
+            title="Network"
+            value={modelNetworkLabel(statusReport, securityReport)}
           />
           <ControlTile
             icon={<Activity aria-hidden="true" />}
@@ -790,6 +898,84 @@ function redactionLabel(report: SecurityAuditReport): string {
 function accessLogLabel(report: SecurityAuditReport): string {
   if (!report.accessLog.enabled) return "Disabled"
   return report.accessLog.storesRawQueries ? "Review raw query storage" : "Metadata only"
+}
+
+function droppedProjectPath(dataTransfer: DataTransfer): string | null {
+  for (const file of Array.from(dataTransfer.files)) {
+    const path = (file as File & { path?: unknown }).path
+    if (typeof path === "string" && path.trim()) {
+      return path
+    }
+  }
+  return null
+}
+
+function modelStatusRows(report: StatusReport | null): Array<{
+  label: string
+  value: string
+  detail: string
+}> {
+  if (!report) {
+    return [
+      { label: "Provider", value: "Awaiting status", detail: "Run Refresh on the active project." },
+      { label: "Embedding model", value: "Configured per project", detail: ".kb/config.json" },
+      { label: "Model cache", value: ".mimir/models", detail: "Ignored local Mimir state." },
+      { label: "Remote loading", value: "Disabled by default", detail: "Enable only to preload." },
+    ]
+  }
+
+  return [
+    {
+      label: "Provider",
+      value: modelProviderLabel(report.embeddingProvider),
+      detail:
+        report.embeddingProvider === "transformers" ? "Semantic retrieval" : "Lexical fallback",
+    },
+    { label: "Embedding model", value: report.embeddingModel, detail: "Configured model ID" },
+    { label: "Model cache", value: report.embeddingModelPath, detail: "Local model path" },
+    {
+      label: "Remote loading",
+      value: report.transformersAllowRemoteModels ? "Allowed" : "Disabled",
+      detail: report.transformersAllowRemoteModels
+        ? "Review for confidential indexing"
+        : "Offline after explicit preload",
+    },
+  ]
+}
+
+function modelProviderLabel(provider: "local-hash" | "transformers"): string {
+  return provider === "transformers" ? "Transformers.js" : "Local hash"
+}
+
+function modelNetworkLabel(
+  statusReport: StatusReport | null,
+  securityReport: SecurityAuditReport | null,
+): string {
+  if (statusReport) {
+    return statusReport.transformersAllowRemoteModels ? "Remote model loading allowed" : "Offline"
+  }
+  if (securityReport) {
+    return securityReport.providers.transformersAllowRemoteModels
+      ? "Remote model loading allowed"
+      : "Offline"
+  }
+  return "Offline by default"
+}
+
+function sourceFileUrl(project: MimirProject, source: { relativePath: string }): string {
+  return localFileUrl(joinProjectPath(project.projectRoot, source.relativePath))
+}
+
+function localFileUrl(path: string): string {
+  const normalized = path.replace(/\\/gu, "/")
+  const segments = normalized.split("/").map((segment, index) => {
+    if (index === 0 && /^[A-Za-z]:$/u.test(segment)) {
+      return segment
+    }
+    return encodeURIComponent(segment)
+  })
+  const encodedPath = segments.join("/")
+  return normalized.startsWith("/") ? `file://${encodedPath}` : `file:///${encodedPath}`
 }
 
 function projectStatusLabel(status: ProjectStatus): string {

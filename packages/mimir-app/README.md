@@ -19,3 +19,7 @@ default.
 Mimir Core integration is a bounded native Tauri command around the existing `mimir` CLI/MCP
 surface. In local native runs, set `MIMIR_CLI_BIN` when the `mimir` binary is not on `PATH`. See
 [`../../docs/app-sidecar-architecture.md`](../../docs/app-sidecar-architecture.md).
+
+The current shell consumes JSON from `mimir doctor`, `mimir status`, `mimir ingest`,
+`mimir ask`, `mimir security-audit`, and `mimir models pull` for project status, cited retrieval,
+privacy posture, and explicit model preloading.

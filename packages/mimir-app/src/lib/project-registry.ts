@@ -117,7 +117,7 @@ function projectNameFromRoot(projectRoot: string): string {
   return parts.at(-1) || "Mimir project"
 }
 
-function joinProjectPath(projectRoot: string, ...segments: string[]): string {
+export function joinProjectPath(projectRoot: string, ...segments: string[]): string {
   const separator = projectRoot.includes("\\") && !projectRoot.includes("/") ? "\\" : "/"
   if (projectRoot === "/") {
     return `${separator}${segments.join(separator)}`
