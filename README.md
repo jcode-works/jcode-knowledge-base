@@ -95,6 +95,8 @@ site, but public deployment remains a separate release action.
   retrieval layer.
 - Retrieve grounded local evidence through CLI, library calls, MCP tools, or bundled agent skills.
 - Optionally create listenable MP3/WAV summaries or cited Markdown reports with bundled skills.
+- Prepare legal-dossier summaries, chronologies, clause reviews, and professional-review handoffs
+  with the optional bundled legal skill.
 
 Mimir is not a hosted SaaS, not a remote vector database, and not a certified high-assurance system.
 For regulated or state-grade environments, pair it with encrypted disks, controlled machines,
@@ -179,6 +181,7 @@ private/                         # raw documents to ingest
 .mimir/skills/mimir/SKILL.md     # portable agent skill
 .mimir/skills/mimir-audio-summary/SKILL.md
 .mimir/skills/mimir-markdown-report/SKILL.md
+.mimir/skills/mimir-legal-dossier/SKILL.md
 .mimir/mcp.json                  # generic MCP server config snippet
 .mimir/claude-mcp-server.json    # Claude Code add-json payload
 .mimir/codex-mcp.toml            # Codex config.toml snippet with MCP and skills.config

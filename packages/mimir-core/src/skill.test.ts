@@ -22,6 +22,7 @@ describe("installSkill", () => {
     const skill = await readFile(path.join(result.skillPath, "SKILL.md"), "utf8")
     const audioSkill = await readFile(path.join(result.audioSkillPath, "SKILL.md"), "utf8")
     const reportSkill = await readFile(path.join(result.reportSkillPath, "SKILL.md"), "utf8")
+    const legalSkill = await readFile(path.join(result.legalSkillPath, "SKILL.md"), "utf8")
     const mcpConfig = JSON.parse(await readFile(result.mcpConfigPath, "utf8")) as {
       mcpServers: { mimir: { command: string; args: string[]; cwd: string } }
     }
@@ -52,6 +53,7 @@ describe("installSkill", () => {
     expect(skill).toContain("name: mimir")
     expect(audioSkill).toContain("name: mimir-audio-summary")
     expect(reportSkill).toContain("name: mimir-markdown-report")
+    expect(legalSkill).toContain("name: mimir-legal-dossier")
     expect(mcpConfig.mcpServers.mimir.command).toBe("pnpm")
     expect(mcpConfig.mcpServers.mimir.args).toEqual(["exec", "mimir", "serve-mcp"])
     expect(mcpConfig.mcpServers.mimir.cwd).toBe(root)
@@ -66,6 +68,7 @@ describe("installSkill", () => {
     expect(codexConfig).toContain(`cwd = ${JSON.stringify(root)}`)
     expect(codexConfig).toContain("[[skills.config]]")
     expect(codexConfig).toContain(path.join(root, ".mimir", "skills", "mimir"))
+    expect(codexConfig).toContain(path.join(root, ".mimir", "skills", "mimir-legal-dossier"))
     expect(kimiConfig.mcpServers.mimir.env.MIMIR_PROJECT_ROOT).toBe(root)
     expect(opencodeConfig.mcp.mimir).toEqual({
       type: "local",
@@ -92,6 +95,7 @@ describe("installSkill", () => {
     expect(second.written).not.toContain(".gitignore")
     expect(first.written).toContain(path.join(".mimir", "skills", "mimir-audio-summary"))
     expect(first.written).toContain(path.join(".mimir", "skills", "mimir-markdown-report"))
+    expect(first.written).toContain(path.join(".mimir", "skills", "mimir-legal-dossier"))
     expect(first.written).toContain(path.join(".mimir", "claude-mcp-server.json"))
     expect(first.written).toContain(path.join(".mimir", "codex-mcp.toml"))
     expect(first.written).toContain(path.join(".mimir", "kimi-mcp.json"))
@@ -152,6 +156,7 @@ describe("installAgentSkills", () => {
     expect(existsSync(path.join(root, ".codex", "skills", "mimir", "SKILL.md"))).toBe(false)
     expect(result.written).toContain(path.join(".claude", "skills", "mimir"))
     expect(result.written).toContain(path.join(".kimi", "skills", "mimir-markdown-report"))
+    expect(result.written).toContain(path.join(".kimi", "skills", "mimir-legal-dossier"))
   })
 
   it("can copy skills when symlinks are not wanted", async () => {

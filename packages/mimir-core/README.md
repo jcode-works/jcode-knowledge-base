@@ -17,7 +17,8 @@ same evidence through:
 - the `mimir` CLI (`kb` remains a legacy alias);
 - a TypeScript library API;
 - a local MCP stdio server for compatible AI agents;
-- portable agent skills copied by `mimir setup`, including audio and Markdown-report workflows.
+- portable agent skills copied by `mimir setup`, including audio, Markdown-report, and legal-dossier
+  workflows.
 
 Mimir does not send documents to a hosted RAG service and does not generate final LLM answers in
 core. It returns cited retrieval context so the agent or model you trust can write from local

@@ -14,6 +14,7 @@ This creates:
 .mimir/skills/mimir/SKILL.md
 .mimir/skills/mimir-audio-summary/SKILL.md
 .mimir/skills/mimir-markdown-report/SKILL.md
+.mimir/skills/mimir-legal-dossier/SKILL.md
 .mimir/mcp.json
 .mimir/claude-mcp-server.json
 .mimir/codex-mcp.toml
@@ -27,8 +28,9 @@ This creates:
 Agents that support skill folders can load `.mimir/skills/mimir/` for deep local RAG usage. Load
 `.mimir/skills/mimir-audio-summary/` only when an optional spoken summary is needed. Load
 `.mimir/skills/mimir-markdown-report/` when the user asks for a cited Markdown report, dossier,
-audit memo, or planning note. Other agents can read the generated `.mimir/README.md` and use the MCP
-config snippet.
+audit memo, or planning note. Load `.mimir/skills/mimir-legal-dossier/` when the user asks for a
+legal chronology, clause review, evidence table, or professional-review handoff. Other agents can
+read the generated `.mimir/README.md` and use the MCP config snippet.
 
 For native discovery in a specific agent, install only the agent you use:
 

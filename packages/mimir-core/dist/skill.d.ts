@@ -9,6 +9,7 @@ export interface InstallSkillResult {
     skillPath: string;
     audioSkillPath: string;
     reportSkillPath: string;
+    legalSkillPath: string;
     mcpConfigPath: string;
     claudeConfigPath: string;
     codexConfigPath: string;

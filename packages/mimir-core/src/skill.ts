@@ -18,6 +18,7 @@ export interface InstallSkillResult {
   skillPath: string
   audioSkillPath: string
   reportSkillPath: string
+  legalSkillPath: string
   mcpConfigPath: string
   claudeConfigPath: string
   codexConfigPath: string
@@ -57,7 +58,13 @@ const PACKAGE_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const PRIMARY_SKILL_NAME = "mimir"
 const AUDIO_SKILL_NAME = "mimir-audio-summary"
 const REPORT_SKILL_NAME = "mimir-markdown-report"
-const SKILL_NAMES = [PRIMARY_SKILL_NAME, AUDIO_SKILL_NAME, REPORT_SKILL_NAME] as const
+const LEGAL_SKILL_NAME = "mimir-legal-dossier"
+const SKILL_NAMES = [
+  PRIMARY_SKILL_NAME,
+  AUDIO_SKILL_NAME,
+  REPORT_SKILL_NAME,
+  LEGAL_SKILL_NAME,
+] as const
 
 export const SUPPORTED_AGENT_TARGETS: readonly AgentTarget[] = [
   "claude",
@@ -157,6 +164,7 @@ export async function installSkill(options: InstallSkillOptions = {}): Promise<I
   const skillPath = path.join(targetDir, PRIMARY_SKILL_NAME)
   const audioSkillPath = path.join(targetDir, AUDIO_SKILL_NAME)
   const reportSkillPath = path.join(targetDir, REPORT_SKILL_NAME)
+  const legalSkillPath = path.join(targetDir, LEGAL_SKILL_NAME)
   const mimirDir = path.resolve(cwd, MIMIR_DIR)
   const mcpConfigPath = path.join(mimirDir, "mcp.json")
   const claudeConfigPath = path.join(mimirDir, "claude-mcp-server.json")
@@ -202,6 +210,7 @@ export async function installSkill(options: InstallSkillOptions = {}): Promise<I
       skillPath,
       audioSkillPath,
       reportSkillPath,
+      legalSkillPath,
       mcpConfigPath,
       claudeConfigPath,
       codexConfigPath,
@@ -220,6 +229,7 @@ export async function installSkill(options: InstallSkillOptions = {}): Promise<I
       skillPath,
       audioSkillPath,
       reportSkillPath,
+      legalSkillPath,
       mcpConfigPath,
       claudeConfigPath,
       codexConfigPath,
@@ -239,6 +249,7 @@ export async function installSkill(options: InstallSkillOptions = {}): Promise<I
     path.relative(cwd, skillPath),
     path.relative(cwd, audioSkillPath),
     path.relative(cwd, reportSkillPath),
+    path.relative(cwd, legalSkillPath),
     path.relative(cwd, mcpConfigPath),
     path.relative(cwd, claudeConfigPath),
     path.relative(cwd, codexConfigPath),
@@ -257,6 +268,7 @@ export async function installSkill(options: InstallSkillOptions = {}): Promise<I
     skillPath,
     audioSkillPath,
     reportSkillPath,
+    legalSkillPath,
     mcpConfigPath,
     claudeConfigPath,
     codexConfigPath,
@@ -463,6 +475,10 @@ enabled = true
 path = ${tomlString(path.join(cwd, DEFAULT_SKILL_TARGET_DIR, REPORT_SKILL_NAME))}
 enabled = true
 
+[[skills.config]]
+path = ${tomlString(path.join(cwd, DEFAULT_SKILL_TARGET_DIR, LEGAL_SKILL_NAME))}
+enabled = true
+
 `
 }
 
@@ -495,6 +511,7 @@ interface AgentKitReadmeInput {
   skillPath: string
   audioSkillPath: string
   reportSkillPath: string
+  legalSkillPath: string
   mcpConfigPath: string
   claudeConfigPath: string
   codexConfigPath: string
@@ -540,6 +557,15 @@ ${input.reportSkillPath}
 
 Use it when the user asks for a cited Markdown report, dossier, audit memo, or planning note. It
 writes reports under ignored local Mimir state by default.
+
+Optional legal-dossier skill folder:
+
+\`\`\`plain text
+${input.legalSkillPath}
+\`\`\`
+
+Use it when the user asks for legal chronology, clause review, evidence tables, or professional
+handoff notes. It prepares cited work products only; it does not provide final legal advice.
 
 ## MCP
 
@@ -625,6 +651,7 @@ interface AgentSetupGuideInput {
   skillPath: string
   audioSkillPath: string
   reportSkillPath: string
+  legalSkillPath: string
   mcpConfigPath: string
   claudeConfigPath: string
   codexConfigPath: string
@@ -680,6 +707,7 @@ copy mode, rerun \`install-agent\` after refreshing \`.mimir/skills/\`.
 ${input.skillPath}
 ${input.audioSkillPath}
 ${input.reportSkillPath}
+${input.legalSkillPath}
 \`\`\`
 
 ## MCP Helpers
