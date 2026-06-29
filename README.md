@@ -301,169 +301,24 @@ provider or model so stored vectors match the active configuration.
 
 Mimir ships with portable agent skills and a standard MCP server.
 
-If `kb setup` was not used, install the agent kit into a repository:
+Use `kb setup` for the normal path, or install only the agent layer later:
 
 ```bash
 pnpm exec kb install-skill
-```
-
-This creates:
-
-```plain text
-.mimir/skills/mimir/SKILL.md
-.mimir/skills/mimir-audio-summary/SKILL.md
-.mimir/skills/mimir-markdown-report/SKILL.md
-.mimir/mcp.json
-.mimir/claude-mcp-server.json
-.mimir/codex-mcp.toml
-.mimir/kimi-mcp.json
-.mimir/opencode.jsonc
-.mimir/cline-mcp.json
-.mimir/agent-setup.md
-.mimir/README.md
-```
-
-Agents that support skill folders can load `.mimir/skills/mimir/` for deep local RAG usage. Load
-`.mimir/skills/mimir-audio-summary/` only when an optional spoken summary is needed. Load
-`.mimir/skills/mimir-markdown-report/` when the user asks for a cited Markdown report, dossier,
-audit memo, or planning note. Other agents can read the generated `.mimir/README.md` and use the MCP
-config snippet.
-
-For native discovery in a specific agent, install only the agent you use:
-
-```bash
-pnpm exec kb install-agent --agents claude
-pnpm exec kb install-agent --agents kimi
 pnpm exec kb install-agent --agents claude,codex,kimi,opencode,cline
 ```
 
-By default, `install-agent` writes project-scope skill folders as links back to `.mimir/skills/`.
-That keeps one original version of every skill. Add `--scope user` for global installations, or
-`--mode copy` only when an agent/runtime cannot follow symlinked skill directories.
-
-| Agent | Project skill directory | Main MCP helper |
-| --- | --- | --- |
-| Claude Code | `.claude/skills/` | `.mimir/claude-mcp-server.json` |
-| Codex | `.codex/skills/` plus `skills.config` | `.mimir/codex-mcp.toml` |
-| Kimi Code CLI | `.kimi/skills/` | `.mimir/kimi-mcp.json` |
-| OpenCode | `.opencode/skills/` | `.mimir/opencode.jsonc` |
-| Cline | `.cline/skills/` | `.mimir/cline-mcp.json` |
-
-Start the MCP server from the repository root:
+Start the MCP server from the repository root when a compatible agent needs tool access:
 
 ```bash
 pnpm exec kb serve-mcp
 ```
 
-MCP tools exposed:
+The MCP server exposes `mimir_status`, `mimir_search`, `mimir_ask`, `mimir_audit`, and
+`mimir_security_audit`. The LLM does not need to know about LanceDB or the raw file layout; it asks
+Mimir for ranked passages or cited context and uses the returned citations.
 
-- `mimir_status`
-- `mimir_search`
-- `mimir_ask`
-- `mimir_audit`
-- `mimir_security_audit`
-
-This MCP layer is the recommended way to let any compatible LLM or agent query the same local
-knowledge base. The LLM does not need to know about LanceDB or the raw file layout; it asks Mimir for
-ranked passages or cited context and uses the returned citations.
-
-### Claude Code
-
-From the target repository root:
-
-```bash
-pnpm exec kb setup
-pnpm exec kb install-agent --agents claude
-claude mcp add-json --scope local mimir "$(cat .mimir/claude-mcp-server.json)"
-```
-
-Claude Code provides the active project path to MCP servers through `CLAUDE_PROJECT_DIR`; Mimir uses
-that value when serving MCP, so the same installed npm package can work inside each repository where
-`kb setup` was run. Keep the MCP scope local unless you intentionally want to share the server
-config.
-
-### Codex
-
-From the target repository root:
-
-```bash
-pnpm exec kb setup
-pnpm exec kb install-agent --agents codex
-cat .mimir/codex-mcp.toml
-```
-
-Copy the printed TOML into `~/.codex/config.toml` or another trusted Codex config layer. The snippet
-contains the repository `cwd`, the Mimir MCP server, and `skills.config` entries for the bundled
-skills.
-
-### Kimi Code CLI
-
-From the target repository root:
-
-```bash
-pnpm exec kb setup
-pnpm exec kb install-agent --agents kimi
-kimi --mcp-config-file .mimir/kimi-mcp.json
-```
-
-Kimi can discover project skills from `.kimi/skills/`. The MCP config can also be installed in
-Kimi's global MCP file if you intentionally want a global setup. If you prefer not to create a
-`.kimi/skills/` discovery folder, Kimi can also be launched directly with
-`kimi --skills-dir .mimir/skills --mcp-config-file .mimir/kimi-mcp.json`.
-
-### OpenCode
-
-From the target repository root:
-
-```bash
-pnpm exec kb setup
-pnpm exec kb install-agent --agents opencode
-cat .mimir/opencode.jsonc
-```
-
-Copy or merge the generated snippet into the OpenCode config layer you use for the project.
-
-### Cline
-
-From the target repository root:
-
-```bash
-pnpm exec kb setup
-pnpm exec kb install-agent --agents cline
-cat .mimir/cline-mcp.json
-```
-
-Cline can discover project skills from `.cline/skills/`. Add the generated MCP JSON under
-`mcpServers` in Cline's MCP configuration when tool access is needed.
-
-For other MCP clients that cannot set `cwd`, set `MIMIR_PROJECT_ROOT=/absolute/path/to/repository`
-when launching `kb serve-mcp`.
-
-### Agent Demo
-
-From a repository that already ran `kb setup` and has Mimir wired into the current agent, ask:
-
-```plain text
-Use Mimir to audit the local evidence. First run mimir_status and mimir_audit. Then search for
-"offline retrieval approval" and produce a cited Markdown report. Do not rely on memory if Mimir
-does not contain enough evidence.
-```
-
-Agents that support skill folders should also load:
-
-```plain text
-.mimir/skills/mimir/
-.mimir/skills/mimir-markdown-report/
-```
-
-The Markdown report skill writes reports under `.mimir/reports/` by default, which stays ignored by
-Git.
-
-Print the bundled skill path from the installed package:
-
-```bash
-pnpm exec kb skill-path
-```
+Per-agent setup details live in [`docs/agent-integration.md`](./docs/agent-integration.md).
 
 ## Audio Summaries
 
@@ -668,60 +523,11 @@ Mimir ships two CLIs:
 - `kb`: the main local RAG, MCP, skills, security, and audio command.
 - `mimir-tts`: the standalone text-to-speech renderer used by `kb audio`.
 
-### Main Workflow
+Most users start with `kb setup`, `kb doctor`, `kb ingest`, `kb search`, `kb ask`, and
+`kb security-audit`. Use `kb models pull` before semantic offline ingestion when remote model
+download is acceptable, and `kb ingest --rebuild` after switching embedding provider or model.
 
-| Command | Use it when |
-| --- | --- |
-| `kb setup` | Initialize Mimir, install the agent kit, run doctor, and ingest when safe. |
-| `kb init` | Create `.kb/config.json`, `.kb/sources.txt`, `private/`, and Git ignore rules. |
-| `kb doctor` | Diagnose setup, index freshness, security warnings, and the next command to run. |
-| `kb doctor --fix` | Create missing scaffolding, install skills/MCP config, and update stale indexes when safe. |
-| `kb models pull` | Download the configured Transformers.js embedding model into `embeddingModelPath`. |
-| `kb ingest` | Parse changed source files, redact, chunk, embed, and update the local LanceDB index. |
-| `kb ingest --rebuild` | Force a full re-index, required after switching embedding provider or model. |
-| `kb audit` | Check whether supported source files are missing from or stale in the index. |
-| `kb audit --unsupported` | List files skipped because they are unsupported, too large, or secret-like. |
-| `kb search "<query>"` | Retrieve ranked passages without asking an LLM to write an answer. |
-| `kb ask "<question>"` | Return cited retrieval context for an agent or trusted model runtime. |
-| `kb security-audit` | Inspect privacy posture: telemetry, providers, redaction, Git ignore, MCP. |
-| `kb status` | Print raw config paths, provider settings, and indexed chunk count. |
-
-### Agent Integration
-
-| Command | Use it when |
-| --- | --- |
-| `kb install-skill` | Copy portable agent skills and an MCP config snippet into `.mimir/`. |
-| `kb skill-path` | Print the package-bundled skill path for agents that load installed package skills. |
-| `kb serve-mcp` | Start the MCP stdio server for compatible agents. |
-
-### Maintenance And Safety
-
-| Command | Use it when |
-| --- | --- |
-| `kb destroy-index --yes` | Delete generated `.kb/storage` index files. |
-| `kb security-audit --strict` | Fail the command when privacy warnings are present. |
-
-### Audio
-
-| Command | Use it when |
-| --- | --- |
-| `kb audio --doctor` | Check TTS runtime readiness. |
-| `kb audio <file> --engine transformers --offline --out .mimir/audio/name.wav` | Render a confidential/offline WAV. |
-| `kb audio <file> --engine edge --out .mimir/audio/name.mp3` | Render a higher-quality online Edge MP3. |
-| `mimir-tts doctor --json` | Inspect the standalone TTS package. |
-| `mimir-tts render <file> --offline --out .mimir/audio/name.wav` | Render directly through the TTS package. |
-
-### Important Options
-
-| Option | Applies to | Meaning |
-| --- | --- | --- |
-| `--top-k <number>` | `search`, `ask` | Number of passages to return. |
-| `--json` | `doctor`, `audit`, `security-audit`, `audio --doctor`, `mimir-tts doctor` | Print machine-readable JSON. |
-| `--unsupported` | `audit` | List skipped file paths and reasons. |
-| `--strict` | `security-audit` | Exit non-zero when warnings exist. |
-| `--offline` | `audio`, `mimir-tts render` | Disable remote model downloads and force the local Transformers.js path. |
-| `--allow-remote-models` | `audio`, `mimir-tts render` | Explicitly allow model downloads for Transformers.js. |
-| `--engine edge` | `audio`, `mimir-tts render` | Use online Edge TTS for MP3 output. |
+The full command and option table lives in [`docs/cli-reference.md`](./docs/cli-reference.md).
 
 ## Library API
 
@@ -747,150 +553,8 @@ Use `doctor --fix` when you want Mimir to repair safe setup issues automatically
 pnpm exec kb doctor --fix
 ```
 
-### `kb doctor` Says The Project Is Not Initialized
-
-Run:
-
-```bash
-pnpm exec kb setup
-pnpm exec kb doctor
-```
-
-Commit only safe scaffolding if this is a real repository. Do not commit private documents,
-`.kb/storage`, `.mimir/`, env files, or credentials.
-
-### No Files Are Indexed
-
-Check that supported files exist under `private/`:
-
-```bash
-find private -maxdepth 2 -type f
-pnpm exec kb ingest
-pnpm exec kb doctor
-```
-
-If documents live elsewhere, add one path per line to `.kb/sources.txt`. Relative paths resolve from
-the project root.
-
-If files exist but are not supported yet, inspect the skipped inventory:
-
-```bash
-pnpm exec kb audit --unsupported
-```
-
-Then either convert them to a supported format, OCR/transcribe them, or add a safe custom UTF-8 text
-extension with `includeExtensions` / `KB_INCLUDE_EXTENSIONS`.
-
-### Search Returns Weak Results
-
-The default `local-hash` provider is dependency-light and offline, but it is lexical/hash retrieval,
-not semantic retrieval.
-
-For better semantic retrieval, configure Transformers.js embeddings and preload the model when
-working offline:
-
-```json
-{
-  "embeddingProvider": "transformers",
-  "embeddingModel": "mixedbread-ai/mxbai-embed-xsmall-v1",
-  "embeddingModelPath": ".mimir/models",
-  "transformersAllowRemoteModels": false
-}
-```
-
-When remote download is acceptable, preload the configured embedding model first:
-
-```bash
-pnpm exec kb models pull
-```
-
-Switching providers requires a full re-ingest:
-
-```bash
-pnpm exec kb ingest --rebuild
-pnpm exec kb doctor
-```
-
-### `kb audit` Reports Missing Or Stale Files
-
-Run:
-
-```bash
-pnpm exec kb ingest
-pnpm exec kb audit
-```
-
-Or let doctor perform the safe incremental update:
-
-```bash
-pnpm exec kb doctor --fix
-```
-
-Mimir incrementally reuses unchanged indexed rows on normal `kb ingest`. Use `kb ingest --rebuild`
-after switching embedding provider/model, after changing chunking settings, or when you want to
-discard and recreate the whole local index.
-
-### `security-audit --strict` Fails
-
-Read the warning lines. Common causes:
-
-- `.kb/`, `.mimir/`, or `private/**` are not ignored by Git.
-- Redaction was disabled.
-- Transformers.js remote model loading was enabled.
-
-Run the safe repair command if Git ignore entries are missing:
-
-```bash
-pnpm exec kb doctor --fix
-pnpm exec kb security-audit --strict
-```
-
-### MP3 Audio Fails Without `--engine edge`
-
-This is intentional. MP3 output uses online Edge TTS and requires explicit consent:
-
-```bash
-pnpm exec kb audio /tmp/summary.txt \
-  --engine edge \
-  --out .mimir/audio/summary.mp3
-```
-
-For confidential or offline work, use WAV:
-
-```bash
-pnpm exec kb audio /tmp/summary.txt \
-  --engine transformers \
-  --offline \
-  --out .mimir/audio/summary.wav
-```
-
-### Edge TTS Is Not Installed
-
-Install the external CLI:
-
-```bash
-pipx install edge-tts
-pnpm exec kb audio --doctor
-```
-
-Only use Edge TTS when sending narration text to the online service is acceptable.
-
-### `mimir-tts --offline` Cannot Render
-
-Offline rendering requires model files to already exist under `.mimir/models/tts` or the path passed
-with `--model-path`.
-
-For a first online setup on non-sensitive text:
-
-```bash
-pnpm exec mimir-tts render /tmp/test.txt --out .mimir/audio/test.wav
-```
-
-Then reuse the cached files with:
-
-```bash
-pnpm exec mimir-tts render /tmp/test.txt --offline --out .mimir/audio/test.wav
-```
+Common fixes for empty indexes, weak search, strict security audit failures, and TTS setup live in
+[`docs/troubleshooting.md`](./docs/troubleshooting.md).
 
 ## Dependency Footprint
 

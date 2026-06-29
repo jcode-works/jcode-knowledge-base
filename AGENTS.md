@@ -29,6 +29,8 @@
 - Keep product documentation canonical in the root `README.md`. Package README files under
   `packages/*/README.md` are intentionally minimal npm entrypoints and must link clearly to the
   GitHub root README because npm displays package README files separately.
+- Keep long operational references in `docs/` when the root README can link to them cleanly. The
+  root README stays the canonical product entrypoint, not a dumping ground for every command table.
 - Keep user-facing titles and marketing surfaces branded as `Mimir`. Use `Mimir Core` only for the
   technical core package and developer-facing metadata.
 - `packages/mimir-ui` is the shared UI/style foundation adapted from the WorkoutGen landing/UI
