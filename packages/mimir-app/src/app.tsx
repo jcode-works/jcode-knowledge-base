@@ -208,6 +208,20 @@ export function App(): React.JSX.Element {
     })
   }
 
+  function handleExportMarkdown(): void {
+    if (!activeProject || !askResult) {
+      setRuntimeMessage("Run retrieval before exporting a Markdown report.")
+      return
+    }
+
+    downloadTextFile(
+      `${safeFilename(activeProject.name)}-retrieval-report.md`,
+      retrievalReportMarkdown(activeProject, askResult),
+      "text/markdown;charset=utf-8",
+    )
+    setRuntimeMessage("Markdown report exported from the current retrieval.")
+  }
+
   async function handlePullModels(): Promise<void> {
     if (!activeProject) {
       setRuntimeMessage("Select a project before preloading the embedding model.")
@@ -383,6 +397,7 @@ export function App(): React.JSX.Element {
               activeProject={activeProject}
               askResult={askResult}
               isRunning={isRunning}
+              onExportMarkdown={handleExportMarkdown}
               onAskSubmit={handleAskSubmit}
               onQuestionChange={setQuestion}
               question={question}
@@ -611,6 +626,7 @@ interface ProjectPanelProps {
 interface RetrievalViewProps extends ProjectPanelProps {
   askResult: AskResult | null
   isRunning: boolean
+  onExportMarkdown: () => void
   onAskSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>
   onQuestionChange: (question: string) => void
   question: string
@@ -620,6 +636,7 @@ function RetrievalView({
   activeProject,
   askResult,
   isRunning,
+  onExportMarkdown,
   onAskSubmit,
   onQuestionChange,
   question,
@@ -634,8 +651,22 @@ function RetrievalView({
     <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
       <Card className="bg-card/90">
         <CardHeader>
-          <CardTitle>Ask</CardTitle>
-          <CardDescription>Retrieval context with source citations.</CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>Ask</CardTitle>
+              <CardDescription>Retrieval context with source citations.</CardDescription>
+            </div>
+            <Button
+              disabled={!activeProject || !askResult || isRunning}
+              size="sm"
+              type="button"
+              variant="outline"
+              onClick={onExportMarkdown}
+            >
+              <Download aria-hidden="true" />
+              Export .md
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <form className="grid gap-3 md:grid-cols-[1fr_auto]" onSubmit={onAskSubmit}>
@@ -964,6 +995,62 @@ function modelNetworkLabel(
 
 function sourceFileUrl(project: MimirProject, source: { relativePath: string }): string {
   return localFileUrl(joinProjectPath(project.projectRoot, source.relativePath))
+}
+
+function retrievalReportMarkdown(project: MimirProject, result: AskResult): string {
+  const lines = [
+    "# Mimir Retrieval Report",
+    "",
+    `Project: ${project.name}`,
+    `Project root: ${project.projectRoot}`,
+    `Question: ${result.query}`,
+    "",
+    "## Retrieval Context",
+    "",
+    result.answer,
+    "",
+    "## Sources",
+    "",
+  ]
+
+  for (const [index, source] of result.sources.entries()) {
+    lines.push(
+      `### [${index + 1}] ${source.relativePath}`,
+      "",
+      `- File: ${sourceFileUrl(project, source)}`,
+      `- Chunk: ${source.chunkIndex}`,
+      `- Distance: ${source.distance === null ? "n/a" : source.distance.toFixed(4)}`,
+      "",
+      "```text",
+      source.text,
+      "```",
+      "",
+    )
+  }
+
+  return `${lines.join("\n").trim()}\n`
+}
+
+function downloadTextFile(filename: string, content: string, type: string): void {
+  const blob = new Blob([content], { type })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = url
+  link.download = filename
+  document.body.append(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+function safeFilename(input: string): string {
+  return (
+    input
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/gu, "-")
+      .replace(/^-|-$/gu, "") || "mimir"
+  )
 }
 
 function localFileUrl(path: string): string {
