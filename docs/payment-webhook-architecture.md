@@ -89,6 +89,13 @@ pnpm --filter @jcode.labs/mimir-app license:from-lemonsqueezy \
 Keep exported provider JSON, private JWK files, generated licenses, and customer ledgers under
 ignored local Mimir state or another private system.
 
+The adapter has a synthetic smoke test that generates a temporary local signing key and converts
+order plus subscription fixtures without provider credentials:
+
+```bash
+pnpm --filter @jcode.labs/mimir-app license:lemonsqueezy:smoke
+```
+
 ## Acceptance Gates For `3E.3`
 
 `3E.3` can be closed only after all of these are true:

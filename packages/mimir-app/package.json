@@ -10,6 +10,7 @@
     "check": "tsc -p tsconfig.json --noEmit",
     "dev": "vite",
     "license:from-lemonsqueezy": "node scripts/license-from-lemonsqueezy.mjs",
+    "license:lemonsqueezy:smoke": "node scripts/license-from-lemonsqueezy-smoke.mjs",
     "license:issue": "node scripts/license-issue.mjs",
     "license:keypair": "node scripts/license-keypair.mjs",
     "preview": "vite preview",
