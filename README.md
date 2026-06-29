@@ -78,7 +78,8 @@ setup and ingest, ask questions with cited local passages, inspect privacy postu
 embedding models explicitly.
 
 The native client is not released, signed, or sold yet. There is no checkout, waitlist, or hosted
-account flow in this repository.
+account flow in this repository. When released, it is planned for direct downloads and sideloadable
+installers, not App Store or Play Store distribution.
 
 ## What Mimir Is For
 

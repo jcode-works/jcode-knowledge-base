@@ -36,6 +36,10 @@ The future packaged sidecar path remains:
 Do not add `externalBin` before the actual sidecar binary exists for the native target triples.
 Doing so would make native Tauri builds fail without adding product value.
 
+Direct-download packaging, signing, and updater constraints live in
+[`app-distribution.md`](./app-distribution.md). Keep updater setup deferred until a real release
+public key, private signing key path, and HTTPS update endpoint exist.
+
 ## Initial Command Surface
 
 The app should start with a small allowlist:
@@ -66,3 +70,4 @@ For audio reports, `run_mimir_command` writes the current retrieval report text 
 - Native sidecar binary build pipeline.
 - Progress events for long ingests.
 - Signed macOS/Windows packaging.
+- Tauri updater wiring after release signing keys and update endpoint are ready.
