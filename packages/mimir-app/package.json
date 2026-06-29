@@ -14,6 +14,8 @@
     "license:issue": "node scripts/license-issue.mjs",
     "license:keypair": "node scripts/license-keypair.mjs",
     "preview": "vite preview",
+    "release:bundle:verify": "node scripts/native-bundle-verify.mjs",
+    "release:bundle:verify:smoke": "node scripts/native-bundle-verify-smoke.mjs",
     "release:checksums": "node scripts/native-checksums.mjs",
     "release:checksums:smoke": "node scripts/native-checksums-smoke.mjs",
     "release:manifest": "node scripts/native-release-manifest.mjs",
