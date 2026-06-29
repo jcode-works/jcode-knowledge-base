@@ -16,7 +16,6 @@ import { cn } from "@jcode.labs/mimir-ui/utils"
 import {
   ArrowRight,
   Bot,
-  Building2,
   ChevronDown,
   ClipboardCheck,
   Code2,
@@ -25,12 +24,15 @@ import {
   FileSearch,
   GitBranch,
   Globe2,
+  Handshake,
   HardDrive,
   LockKeyhole,
   Monitor,
   Plug,
   Scale,
   ShieldCheck,
+  UserPlus,
+  Users,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -189,22 +191,34 @@ export function LandingHero({
 
   const useCases = [
     {
+      icon: UserPlus,
+      eyebrow: t("use_case_onboarding_eyebrow"),
+      title: t("use_case_onboarding_title"),
+      text: t("use_case_onboarding_text"),
+    },
+    {
+      icon: Users,
+      eyebrow: t("use_case_team_eyebrow"),
+      title: t("use_case_team_title"),
+      text: t("use_case_team_text"),
+    },
+    {
+      icon: Handshake,
+      eyebrow: t("use_case_sales_eyebrow"),
+      title: t("use_case_sales_title"),
+      text: t("use_case_sales_text"),
+    },
+    {
+      icon: ClipboardCheck,
+      eyebrow: t("use_case_vendor_eyebrow"),
+      title: t("use_case_vendor_title"),
+      text: t("use_case_vendor_text"),
+    },
+    {
       icon: Scale,
       eyebrow: t("use_case_legal_eyebrow"),
       title: t("use_case_legal_title"),
       text: t("use_case_legal_text"),
-    },
-    {
-      icon: ClipboardCheck,
-      eyebrow: t("use_case_rfp_eyebrow"),
-      title: t("use_case_rfp_title"),
-      text: t("use_case_rfp_text"),
-    },
-    {
-      icon: Building2,
-      eyebrow: t("use_case_company_eyebrow"),
-      title: t("use_case_company_title"),
-      text: t("use_case_company_text"),
     },
     {
       icon: FileSearch,
@@ -507,7 +521,7 @@ export function LandingHero({
           <p className="mt-4 text-muted-foreground text-sm leading-6">{t("use_cases_text")}</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {useCases.map((useCase) => (
             <Card className="bg-card/82 shadow-xl shadow-black/20" key={useCase.title}>
               <CardHeader className="gap-3 p-5 md:p-6">
