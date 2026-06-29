@@ -27,9 +27,15 @@ This root README is the canonical product documentation for the public npm packa
 | --- | --- |
 | `@jcode.labs/mimir` | Mimir Core: CLI, library, MCP server, bundled agent skills, and synthetic examples. |
 | `@jcode.labs/mimir-tts` | Mimir add-on for Edge-quality MP3 and offline Transformers.js WAV rendering through `kb audio`. |
+| `@jcode.labs/mimir-ui` | Private workspace UI package adapted from the WorkoutGen design foundation for Mimir surfaces. |
+| `@jcode.labs/mimir-landing` | Private Astro static landing package. Product-facing titles stay `Mimir`. |
+| `@jcode.labs/mimir-app` | Private Tauri desktop/mobile shell package. Native builds are explicit app commands. |
 
 The package README files are intentionally short because npm displays each package README
 separately. They point npm readers back to this GitHub documentation.
+
+The product name visible to users is **Mimir**. The technical core package is **Mimir Core** and now
+lives under `packages/mimir-core`; the public npm package name remains `@jcode.labs/mimir`.
 
 ## Open Source
 
@@ -96,7 +102,8 @@ context.
 - A repository where generated local folders can be ignored by Git.
 - No model runtime is required for the default `embeddingProvider: "local-hash"` mode.
 - Optional semantic embeddings use Transformers.js with local model files under `.mimir/models` by
-  default.
+  default. Use `kb models pull` when remote model download is acceptable, then keep
+  `transformersAllowRemoteModels` false for confidential indexing.
 - Generated answers are intentionally outside Mimir core. Use Claude, Codex, OpenAI, a local model
   MCP server, or another trusted model runtime to synthesize from Mimir's cited context.
 - Optional audio summaries use `@jcode.labs/mimir-tts`. For highest-quality MP3, install the
@@ -280,13 +287,15 @@ Use this when you want better semantic retrieval while keeping Mimir core free o
 Commands:
 
 ```bash
+pnpm exec kb models pull
 pnpm exec kb ingest
 pnpm exec kb ask "Which passages support offline operation?"
 ```
 
-Keep `transformersAllowRemoteModels` false for confidential or air-gapped work and preload model
-files into `embeddingModelPath`. Set it to true only when you explicitly allow Transformers.js to
-download model files from Hugging Face.
+`kb models pull` intentionally allows a one-time download from Hugging Face into
+`embeddingModelPath`. Keep `transformersAllowRemoteModels` false for confidential or air-gapped
+indexing after the model files are present. Re-run `kb ingest --rebuild` after changing embedding
+provider or model so stored vectors match the active configuration.
 
 ## Agent Skills And MCP
 
@@ -620,9 +629,9 @@ Default `.kb/config.json`:
   },
   "accessLog": true,
   "mcpMaxTopK": 10,
-  "topK": 5,
+  "topK": 8,
   "chunkSize": 1200,
-  "chunkOverlap": 150,
+  "chunkOverlap": 200,
   "maxFileBytes": 50000000,
   "ingestConcurrency": 4,
   "embeddingBatchSize": 32,
@@ -666,8 +675,10 @@ Mimir ships two CLIs:
 | `kb setup` | Initialize Mimir, install the agent kit, run doctor, and ingest when safe. |
 | `kb init` | Create `.kb/config.json`, `.kb/sources.txt`, `private/`, and Git ignore rules. |
 | `kb doctor` | Diagnose setup, index freshness, security warnings, and the next command to run. |
-| `kb doctor --fix` | Create missing scaffolding, install skills/MCP config, and rebuild stale indexes when safe. |
-| `kb ingest` | Parse source files, redact, chunk, embed, and rebuild the local LanceDB index. |
+| `kb doctor --fix` | Create missing scaffolding, install skills/MCP config, and update stale indexes when safe. |
+| `kb models pull` | Download the configured Transformers.js embedding model into `embeddingModelPath`. |
+| `kb ingest` | Parse changed source files, redact, chunk, embed, and update the local LanceDB index. |
+| `kb ingest --rebuild` | Force a full re-index, required after switching embedding provider or model. |
 | `kb audit` | Check whether supported source files are missing from or stale in the index. |
 | `kb audit --unsupported` | List files skipped because they are unsupported, too large, or secret-like. |
 | `kb search "<query>"` | Retrieve ranked passages without asking an LLM to write an answer. |
@@ -787,10 +798,16 @@ working offline:
 }
 ```
 
+When remote download is acceptable, preload the configured embedding model first:
+
+```bash
+pnpm exec kb models pull
+```
+
 Switching providers requires a full re-ingest:
 
 ```bash
-pnpm exec kb ingest
+pnpm exec kb ingest --rebuild
 pnpm exec kb doctor
 ```
 
@@ -803,14 +820,15 @@ pnpm exec kb ingest
 pnpm exec kb audit
 ```
 
-Or let doctor perform the safe rebuild:
+Or let doctor perform the safe incremental update:
 
 ```bash
 pnpm exec kb doctor --fix
 ```
 
-Mimir rebuilds the index on each ingest. The `--rebuild` flag is accepted for compatibility, but
-ingest already rebuilds.
+Mimir incrementally reuses unchanged indexed rows on normal `kb ingest`. Use `kb ingest --rebuild`
+after switching embedding provider/model, after changing chunking settings, or when you want to
+discard and recreate the whole local index.
 
 ### `security-audit --strict` Fails
 
@@ -895,7 +913,7 @@ choose `local-hash`, while preserving richer parsing, MCP support, and optional 
 ## Example Test Workspace
 
 This repository includes a synthetic example under
-[`packages/mimir/examples/sovereign-rag-demo`](./packages/mimir/examples/sovereign-rag-demo). It can
+[`packages/mimir-core/examples/sovereign-rag-demo`](./packages/mimir-core/examples/sovereign-rag-demo). It can
 be used to test ingestion, retrieval, `security-audit`, and custom text extensions without using
 private documents.
 
@@ -903,7 +921,7 @@ From a local checkout:
 
 ```bash
 pnpm build
-cd packages/mimir/examples/sovereign-rag-demo
+cd packages/mimir-core/examples/sovereign-rag-demo
 node ../../dist/cli.js security-audit
 node ../../dist/cli.js ingest
 node ../../dist/cli.js search "offline retrieval approval"
@@ -927,12 +945,15 @@ Useful filtered commands:
 ```bash
 pnpm --filter @jcode.labs/mimir test
 pnpm --filter @jcode.labs/mimir-tts test
+pnpm --filter @jcode.labs/mimir-app build
+pnpm --filter @jcode.labs/mimir-landing build
 pnpm --filter @jcode.labs/mimir build
 pnpm --filter @jcode.labs/mimir-tts build
 ```
 
-`packages/mimir/dist/` and `packages/mimir-tts/dist/` are committed. After changing TypeScript
-sources, run:
+`packages/mimir-core/dist/` and `packages/mimir-tts/dist/` are committed. `packages/mimir-app/dist/`
+and `packages/mimir-landing/dist/` are ignored build artifacts. After changing TypeScript sources in
+published packages, run:
 
 ```bash
 pnpm build
@@ -957,14 +978,14 @@ pnpm build
 Use a local checkout in another repository:
 
 ```bash
-pnpm add -D file:../jcode-mimir/packages/mimir
+pnpm add -D file:../jcode-mimir/packages/mimir-core
 ```
 
 Create a local npm tarball:
 
 ```bash
 pnpm build
-pnpm --dir packages/mimir pack
+pnpm --dir packages/mimir-core pack
 ```
 
 ## Supporting Documents

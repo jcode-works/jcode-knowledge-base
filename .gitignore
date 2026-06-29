@@ -8,13 +8,20 @@ private/**
 .mimir/
 *.tgz
 release-artifacts/
+*.pid
+
+packages/mimir-app/dist/
+packages/mimir-app/src-tauri/target/
+packages/mimir-app/src-tauri/gen/
+packages/mimir-landing/.astro/
+packages/mimir-landing/dist/
 
 # Tracked synthetic examples. Keep generated example runtime state ignored.
-!packages/mimir/examples/
-!packages/mimir/examples/**/
-!packages/mimir/examples/**/.kb/
-!packages/mimir/examples/**/.kb/config.json
-!packages/mimir/examples/**/.kb/sources.txt
-packages/mimir/examples/**/.kb/storage/
-packages/mimir/examples/**/.kb/access.log
-packages/mimir/examples/**/.mimir/
+!packages/mimir-core/examples/
+!packages/mimir-core/examples/**/
+!packages/mimir-core/examples/**/.kb/
+!packages/mimir-core/examples/**/.kb/config.json
+!packages/mimir-core/examples/**/.kb/sources.txt
+packages/mimir-core/examples/**/.kb/storage/
+packages/mimir-core/examples/**/.kb/access.log
+packages/mimir-core/examples/**/.mimir/

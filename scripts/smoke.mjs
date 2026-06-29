@@ -5,7 +5,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-const corePackageRoot = path.join(repoRoot, "packages", "mimir")
+const corePackageRoot = path.join(repoRoot, "packages", "mimir-core")
 const cliPath = path.join(corePackageRoot, "dist", "cli.js")
 const tempRoot = await mkdtemp(path.join(tmpdir(), "mimir-smoke-"))
 const MCP_REQUEST_TIMEOUT_MS = 10_000

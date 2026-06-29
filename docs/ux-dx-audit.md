@@ -6,10 +6,10 @@ developer and agent workflow around installation, indexing, querying, safety, au
 ## Evidence Reviewed
 
 - Root product README: `README.md`
-- npm package entrypoint READMEs: `packages/mimir/README.md`, `packages/mimir-tts/README.md`
-- CLI implementation: `packages/mimir/src/cli.ts`
+- npm package entrypoint READMEs: `packages/mimir-core/README.md`, `packages/mimir-tts/README.md`
+- CLI implementation: `packages/mimir-core/src/cli.ts`
 - TTS implementation: `packages/mimir-tts/src/index.ts`
-- Agent skills: `packages/mimir/skills/**/SKILL.md`
+- Agent skills: `packages/mimir-core/skills/**/SKILL.md`
 - Security docs: `SECURITY-HARDENING.md`, `SECURITY.md`
 - Release workflow: `.github/workflows/ci.yml`, `.github/workflows/npm-publish.yml`
 - Runtime smoke path through a temporary repository
@@ -27,6 +27,7 @@ developer and agent workflow around installation, indexing, querying, safety, au
 | Ingestion visibility | Unsupported files were ignored silently, which made users overestimate coverage. | Fixed: `ingest`, `audit`, and `audit --unsupported` report skipped files by reason. |
 | Report generation | Users had audio summaries but no dedicated Markdown-report workflow. | Fixed: `mimir-markdown-report` skill writes cited reports under ignored local state. |
 | Stale detection | Audit compared paths but did not detect changed file content. | Fixed: audit now uses stored checksums to flag stale indexed content. |
+| Semantic model preload | Users had to infer how to warm the Transformers.js cache. | Fixed: `kb models pull` downloads the configured embedding model into `embeddingModelPath`. |
 
 ## DX Findings
 
@@ -43,8 +44,8 @@ developer and agent workflow around installation, indexing, querying, safety, au
 
 - `local-hash` is intentionally low-friction but not semantic. The docs must continue to say this
   clearly so users do not overtrust retrieval quality.
-- Transformers.js offline TTS still depends on preloaded model files. The install path is easy, but
-  fully air-gapped operation requires a documented model-preload workflow.
+- Transformers.js offline TTS still depends on preloaded model files. Embedding preload now has
+  `kb models pull`, but fully air-gapped TTS still needs a dedicated preload workflow.
 - MCP access is read-focused but still exposes private retrieved passages to the connected agent.
   Team/RBAC support remains out of scope.
 - `audit --unsupported` intentionally lists relative paths only; users still need to avoid pasting
@@ -55,5 +56,5 @@ developer and agent workflow around installation, indexing, querying, safety, au
 
 1. Add API reference docs for exported functions and result types.
 2. Add MCP tool schema examples for agent developers.
-3. Add a model-preload guide for semantic embeddings and offline TTS.
+3. Add a model-preload guide for offline TTS.
 4. Add deeper API reference docs for external library consumers once the public API grows.

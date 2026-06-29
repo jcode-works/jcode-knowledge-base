@@ -29,6 +29,16 @@
 - Keep product documentation canonical in the root `README.md`. Package README files under
   `packages/*/README.md` are intentionally minimal npm entrypoints and must link clearly to the
   GitHub root README because npm displays package README files separately.
+- Keep user-facing titles and marketing surfaces branded as `Mimir`. Use `Mimir Core` only for the
+  technical core package and developer-facing metadata.
+- `packages/mimir-ui` is the shared UI/style foundation adapted from the WorkoutGen landing/UI
+  approach. It provides the common Tailwind theme and React primitives for both the landing and the
+  Tauri app; do not import WorkoutGen product copy, assets, analytics, or secrets.
+- `packages/mimir-landing` is the Astro static landing package. It must stay telemetry-free by
+  default; do not add PostHog. If analytics are needed later, prefer Cloudflare Web Analytics.
+- `packages/mimir-app` is the cross-platform Tauri desktop/mobile shell. Root `pnpm build` validates
+  the frontend bundle only; native `tauri build`, `tauri ios *`, and `tauri android *` commands stay
+  explicit and are not part of npm release validation.
 - Keep optional audio summaries separate from core ingestion/query behavior. The
   `mimir-audio-summary` skill must prefer `kb audio` / `@jcode.labs/mimir-tts`, default to the
   Transformers.js WAV path for offline/confidential rendering, use the Edge MP3 path for global
@@ -45,7 +55,7 @@
 - Keep Mimir core free of Ollama. `embeddingProvider: "local-hash"` supports ingestion, search, MCP,
   and cited retrieval without a model server, but it must not be described as equivalent to semantic
   retrieval. `embeddingProvider: "transformers"` is the optional semantic embedding path.
-- Keep `packages/mimir/examples/sovereign-rag-demo` synthetic and safe to commit. It exists for
+- Keep `packages/mimir-core/examples/sovereign-rag-demo` synthetic and safe to commit. It exists for
   package/user testing only; never place real confidential documents there.
 - Use Context7 before changing dependencies or public APIs that rely on external libraries.
 - Run `pnpm validate` before opening a release pull request or publishing. It covers
@@ -54,6 +64,8 @@
 - Do not publish from a local machine or direct push to `main`. npm releases must go through
   the protected manual `Publish npm` GitHub Actions workflow after `main` has green CI. The workflow
   publishes `@jcode.labs/mimir-tts` first, then `@jcode.labs/mimir`.
+- Use Git Flow locally: `main` is production, `develop` is integration, feature work starts from
+  `develop` under `feature/*`. Do not deploy or publish from feature branches.
 
 ## Coding Conventions
 
@@ -68,7 +80,7 @@ General principles (KISS, DRY, YAGNI, SOLID) as applied in this codebase. Match 
 - No dead or obsolete code. Delete replaced code, unused exports, and commented-out blocks in the
   same change; a deletion must cover both source and the regenerated package `dist/`.
 - No magic strings or numbers. Name meaningful literals as constants, and put shared paths, provider
-  defaults, and ignore constants in `packages/mimir/src/defaults.ts` rather than copying them across
+  defaults, and ignore constants in `packages/mimir-core/src/defaults.ts` rather than copying them across
   modules.
 - Validate at the boundary, narrow inside. Use Zod at external edges (config in `config.ts`, MCP
   inputs in `mcp.ts`) and CLI parsers (`parsePositiveInt`); trust the types past that point.
@@ -82,28 +94,33 @@ General principles (KISS, DRY, YAGNI, SOLID) as applied in this codebase. Match 
 
 ## Architecture
 
-- `packages/mimir` is the core package published as `@jcode.labs/mimir`.
-- `packages/mimir/src/cli.ts` exposes the `kb` CLI.
-- `packages/mimir/src/doctor.ts` owns the user-facing readiness diagnosis behind `kb doctor`.
-- `packages/mimir/src/config.ts` resolves `.kb/config.json` from the target repository.
-- `packages/mimir/src/defaults.ts` owns shared default paths, provider defaults, and generated-state ignore
+- `packages/mimir-core` is Mimir Core, published as `@jcode.labs/mimir`.
+- `packages/mimir-core/src/cli.ts` exposes the `kb` CLI.
+- `packages/mimir-core/src/doctor.ts` owns the user-facing readiness diagnosis behind `kb doctor`.
+- `packages/mimir-core/src/config.ts` resolves `.kb/config.json` from the target repository.
+- `packages/mimir-core/src/defaults.ts` owns shared default paths, provider defaults, and generated-state ignore
   constants. Keep config/init/security/gitignore aligned through this module instead of copying
   literals.
-- `packages/mimir/src/ingest.ts` parses supported files, chunks text, embeds chunks, and rebuilds the
-  local LanceDB table.
-- `packages/mimir/src/query.ts` performs vector search and returns cited retrieval context; LLM synthesis belongs
-  outside Mimir core.
-- `packages/mimir/src/mcp.ts` exposes Mimir as an MCP stdio server for agents.
+- `packages/mimir-core/src/ingest.ts` parses supported files, chunks text, embeds chunks, and rebuilds the
+  local LanceDB table. Normal ingest is incremental and reuses rows whose checksum/provider/model
+  still match; `--rebuild` forces a full re-index.
+- `packages/mimir-core/src/query.ts` performs hybrid retrieval (vector candidates plus bounded lexical
+  BM25 scoring) and returns cited retrieval context; LLM synthesis belongs outside Mimir core.
+- `packages/mimir-core/src/mcp.ts` exposes Mimir as an MCP stdio server for agents.
 - `packages/mimir-tts` is the standalone TTS package used by `kb audio`; it uses `edge-tts` for
   high-quality MP3 when available and Transformers.js for offline WAV rendering.
-- `packages/mimir/src/gitignore.ts` owns target-repository `.gitignore` entries for local generated Mimir
+- `packages/mimir-ui` owns shared React UI primitives and Tailwind theme tokens used by Mimir
+  product surfaces.
+- `packages/mimir-landing` owns the static Astro landing page.
+- `packages/mimir-app` owns the Tauri app shell for desktop and mobile.
+- `packages/mimir-core/src/gitignore.ts` owns target-repository `.gitignore` entries for local generated Mimir
   state.
-- `packages/mimir/src/security.ts`, `packages/mimir/src/redaction.ts`, and
-  `packages/mimir/src/access-log.ts` own the
+- `packages/mimir-core/src/security.ts`, `packages/mimir-core/src/redaction.ts`, and
+  `packages/mimir-core/src/access-log.ts` own the
   privacy and confidentiality hardening layer.
-- `packages/mimir/skills/mimir/SKILL.md` is the bundled portable agent skill.
-- `packages/mimir/skills/mimir-audio-summary/SKILL.md` is the optional bundled audio-summary skill.
-- `packages/mimir/skills/mimir-markdown-report/SKILL.md` is the optional bundled Markdown-report
+- `packages/mimir-core/skills/mimir/SKILL.md` is the bundled portable agent skill.
+- `packages/mimir-core/skills/mimir-audio-summary/SKILL.md` is the optional bundled audio-summary skill.
+- `packages/mimir-core/skills/mimir-markdown-report/SKILL.md` is the optional bundled Markdown-report
   skill.
 - `kb setup` must keep generating agent-specific MCP helpers for easy local use:
   `.mimir/claude-mcp-server.json` for `claude mcp add-json`, `.mimir/codex-mcp.toml` for Codex
@@ -115,7 +132,7 @@ General principles (KISS, DRY, YAGNI, SOLID) as applied in this codebase. Match 
 - Keep `.mimir/skills/` as the canonical skill source in target repositories. Native agent folders
   created by `kb install-agent` should link to that source by default; use copy mode only as a
   compatibility fallback for runtimes or filesystems that cannot follow symlinks.
-- `packages/mimir/examples/sovereign-rag-demo` is the tracked synthetic test workspace for manual
+- `packages/mimir-core/examples/sovereign-rag-demo` is the tracked synthetic test workspace for manual
   and package validation.
 - `.kb/`, `.mimir/`, and project `private/` folders are local user data or generated agent
   state in target repositories and must not be committed.

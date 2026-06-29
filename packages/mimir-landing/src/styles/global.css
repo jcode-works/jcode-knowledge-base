@@ -1,0 +1,12 @@
+@import "@jcode.labs/mimir-ui/globals.css";
+
+main {
+  min-height: 100vh;
+}
+
+.mimir-grid {
+  background-image:
+    linear-gradient(color-mix(in oklch, var(--foreground) 9%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklch, var(--foreground) 9%, transparent) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
