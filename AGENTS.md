@@ -104,6 +104,8 @@ General principles (KISS, DRY, YAGNI, SOLID) as applied in this codebase. Match 
 
 - `packages/mimir-core` is Mimir Core, published as `@jcode.labs/mimir`.
 - `packages/mimir-core/src/cli.ts` exposes the `kb` CLI.
+- The `kb` CLI supports global `--project-root <path>` for sidecar/app usage. Prefer it when a
+  process cannot or should not change cwd for each selected knowledge base.
 - `packages/mimir-core/src/doctor.ts` owns the user-facing readiness diagnosis behind `kb doctor`.
 - `packages/mimir-core/src/config.ts` resolves `.kb/config.json` from the target repository.
 - `packages/mimir-core/src/defaults.ts` owns shared default paths, provider defaults, and generated-state ignore

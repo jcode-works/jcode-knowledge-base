@@ -47,8 +47,9 @@ The app should start with a small allowlist:
 | Unsupported files | `kb audit --unsupported --json` |
 | Model preload | `kb models pull --json` |
 
-The UI must pass an explicit project root for each selected knowledge base and keep generated state
-inside that project (`.kb/`, `.mimir/`) unless the user intentionally chooses another local folder.
+The UI must pass an explicit project root for each selected knowledge base with
+`kb --project-root "<path>" ...` and keep generated state inside that project (`.kb/`, `.mimir/`)
+unless the user intentionally chooses another local folder.
 
 ## Deferred Work
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import path from "node:path";
 import { Command } from "commander";
 import pc from "picocolors";
 import { loadConfig } from "./config.js";
@@ -21,14 +22,16 @@ const program = new Command();
 program
     .name("kb")
     .description("Local-first RAG knowledge base for private project documents.")
-    .version(VERSION);
+    .version(VERSION)
+    .option("--project-root <path>", "Run project-scoped commands against this local workspace.");
 const modelsCommand = program.command("models").description("Manage local embedding models.");
 modelsCommand
     .command("pull")
     .description("Download the configured Transformers.js embedding model into embeddingModelPath.")
     .option("--json", "Print machine-readable JSON.")
-    .action(async (options) => {
-    const config = await loadConfig(process.cwd());
+    .action(async (options, command) => {
+    const cwd = projectRoot(command);
+    const config = await loadConfig(cwd);
     const result = await pullEmbeddingModel(config);
     if (options.json) {
         console.log(JSON.stringify(result, null, 2));
@@ -48,9 +51,10 @@ program
     .description("Diagnose setup, index freshness, privacy posture, and next steps.")
     .option("--fix", "Create missing scaffolding, install the agent kit, and rebuild stale indexes.")
     .option("--json", "Print machine-readable JSON.")
-    .action(async (options) => {
+    .action(async (options, command) => {
+    const cwd = projectRoot(command);
     if (options.fix) {
-        const result = await setupProject({ cwd: process.cwd() });
+        const result = await setupProject({ cwd });
         if (options.json) {
             console.log(JSON.stringify(result, null, 2));
             return;
@@ -58,7 +62,7 @@ program
         printSetup(result, "Mimir repair complete.");
         return;
     }
-    const report = await doctor(process.cwd());
+    const report = await doctor(cwd);
     if (options.json) {
         console.log(JSON.stringify(report, null, 2));
         return;
@@ -71,9 +75,10 @@ program
     .option("--target-dir <path>", "Directory where the skill folder should be copied.", ".mimir/skills")
     .option("--no-ingest", "Skip automatic indexing even when supported files are present.")
     .option("--json", "Print machine-readable JSON.")
-    .action(async (options) => {
+    .action(async (options, command) => {
+    const cwd = projectRoot(command);
     const setupOptions = {
-        cwd: process.cwd(),
+        cwd,
         targetDir: options.targetDir,
     };
     addOption(setupOptions, "ingest", options.ingest);
@@ -87,11 +92,12 @@ program
 program
     .command("init")
     .description("Create .kb config files and private/ document folder in the current repository.")
-    .action(async () => {
-    const created = await initProject(process.cwd());
+    .action(async (_options, command) => {
+    const cwd = projectRoot(command);
+    const created = await initProject(cwd);
     if (created.length === 0) {
         console.log(pc.green("Already initialized."));
-        const doctorCommand = await kbCommand(process.cwd(), ["doctor"]);
+        const doctorCommand = await kbCommand(cwd, ["doctor"]);
         console.log(`Run \`${doctorCommand.display}\` to check readiness.`);
         return;
     }
@@ -99,9 +105,9 @@ program
     for (const file of created) {
         console.log(`  - ${file}`);
     }
-    const ingestCommand = await kbCommand(process.cwd(), ["ingest"]);
-    const doctorCommand = await kbCommand(process.cwd(), ["doctor"]);
-    const searchCommand = await kbCommand(process.cwd(), ["search", "your question"]);
+    const ingestCommand = await kbCommand(cwd, ["ingest"]);
+    const doctorCommand = await kbCommand(cwd, ["doctor"]);
+    const searchCommand = await kbCommand(cwd, ["search", "your question"]);
     console.log("");
     console.log(pc.cyan("Next steps:"));
     console.log("  1. Add supported documents under private/");
@@ -114,8 +120,9 @@ program
     .description("Parse changed documents, redact, chunk, embed locally, and update LanceDB.")
     .option("--rebuild", "Force a full local index rebuild instead of reusing unchanged rows.")
     .option("--json", "Print machine-readable JSON.")
-    .action(async (options) => {
-    const ingestOptions = { cwd: process.cwd() };
+    .action(async (options, command) => {
+    const cwd = projectRoot(command);
+    const ingestOptions = { cwd };
     addOption(ingestOptions, "rebuild", options.rebuild);
     const result = await ingest(ingestOptions);
     if (options.json) {
@@ -128,7 +135,7 @@ program
     console.log(pc.green(`Done. discoveredFiles=${result.discoveredFiles} supportedFiles=${result.supportedFiles} indexedFiles=${result.indexedFiles} rebuiltFiles=${result.rebuiltFiles} reusedFiles=${result.reusedFiles} chunks=${result.chunks} skippedFiles=${result.skippedFiles} unsupportedFiles=${result.unsupportedFiles} oversizedFiles=${result.oversizedFiles} sensitiveFiles=${result.sensitiveFiles} redactions=${result.redactions} errors=${result.errors.length}`));
     printUnsupportedSummary(result.unsupportedExtensions);
     if (result.unsupportedFiles > 0 || result.oversizedFiles > 0 || result.sensitiveFiles > 0) {
-        const auditCommand = await kbCommand(process.cwd(), ["audit", "--unsupported"]);
+        const auditCommand = await kbCommand(cwd, ["audit", "--unsupported"]);
         console.log(pc.yellow(`Some files were not indexed. Run \`${auditCommand.display}\` for details.`));
     }
     for (const error of result.errors) {
@@ -144,8 +151,9 @@ program
     .argument("<query>", "Search query.")
     .option("-k, --top-k <number>", "Number of passages to return.", parsePositiveInt)
     .option("--json", "Print machine-readable JSON.")
-    .action(async (query, options) => {
-    const results = await search(query, withTopK(options.topK));
+    .action(async (query, options, command) => {
+    const cwd = projectRoot(command);
+    const results = await search(query, withTopK(cwd, options.topK));
     if (options.json) {
         console.log(JSON.stringify({ query, results }, null, 2));
         if (results.length === 0) {
@@ -154,7 +162,7 @@ program
         return;
     }
     if (results.length === 0) {
-        const repairCommand = await kbCommand(process.cwd(), ["doctor", "--fix"]);
+        const repairCommand = await kbCommand(cwd, ["doctor", "--fix"]);
         console.error(pc.yellow(`No results. Add documents or run \`${repairCommand.display}\`.`));
         process.exitCode = 1;
         return;
@@ -171,8 +179,9 @@ program
     .argument("<query>", "Question to answer.")
     .option("-k, --top-k <number>", "Number of passages to use.", parsePositiveInt)
     .option("--json", "Print machine-readable JSON.")
-    .action(async (query, options) => {
-    const result = await ask(query, withTopK(options.topK));
+    .action(async (query, options, command) => {
+    const cwd = projectRoot(command);
+    const result = await ask(query, withTopK(cwd, options.topK));
     if (options.json) {
         console.log(JSON.stringify({ query, ...result }, null, 2));
         if (result.sources.length === 0) {
@@ -193,8 +202,9 @@ program
     .description("Compare supported files on disk with the current vector index.")
     .option("--unsupported", "List skipped file paths and reasons.")
     .option("--json", "Print machine-readable JSON.")
-    .action(async (options) => {
-    const report = await audit(process.cwd());
+    .action(async (options, command) => {
+    const cwd = projectRoot(command);
+    const report = await audit(cwd);
     if (options.json) {
         console.log(JSON.stringify(report, null, 2));
         return;
@@ -229,8 +239,9 @@ program
     .command("status")
     .description("Show active configuration and index row count.")
     .option("--json", "Print machine-readable JSON.")
-    .action(async (options) => {
-    const config = await loadConfig(process.cwd());
+    .action(async (options, command) => {
+    const cwd = projectRoot(command);
+    const config = await loadConfig(cwd);
     const rows = await countRows(config);
     const status = {
         projectRoot: config.projectRoot,
@@ -284,8 +295,9 @@ program
     .description("Show local privacy, provider, redaction, MCP, and gitignore posture.")
     .option("--json", "Print machine-readable JSON.")
     .option("--strict", "Exit with code 1 when warnings are present.")
-    .action(async (options) => {
-    const report = await securityAudit(process.cwd());
+    .action(async (options, command) => {
+    const cwd = projectRoot(command);
+    const report = await securityAudit(cwd);
     if (options.json) {
         console.log(JSON.stringify(report, null, 2));
     }
@@ -315,13 +327,14 @@ program
     .command("destroy-index")
     .description("Remove the generated local vector index from .kb/storage.")
     .option("--yes", "Confirm deletion without an interactive prompt.")
-    .action(async (options) => {
+    .action(async (options, command) => {
+    const cwd = projectRoot(command);
     if (!options.yes) {
         console.error(pc.red("Refusing to delete the index without --yes."));
         process.exitCode = 1;
         return;
     }
-    const result = await destroyIndex(process.cwd());
+    const result = await destroyIndex(cwd);
     console.log(`storageDir=${result.storageDir}`);
     console.log(`removed=${result.removed}`);
     console.log(result.note);
@@ -342,7 +355,8 @@ program
     .option("--speed <number>", "Optional model-specific speech speed.", parseNumber)
     .option("--doctor", "Show TTS runtime readiness instead of rendering.")
     .option("--json", "Print machine-readable JSON.")
-    .action(async (textFile, options) => {
+    .action(async (textFile, options, command) => {
+    const cwd = projectRoot(command);
     const tts = await loadTts();
     if (options.doctor) {
         const report = await tts.doctor();
@@ -355,7 +369,7 @@ program
         return;
     }
     const renderOptions = {
-        cwd: process.cwd(),
+        cwd,
         textFile,
         engine: audioEngine(options),
     };
@@ -373,8 +387,9 @@ program
 program
     .command("serve-mcp")
     .description("Start the MCP server over stdio for Claude, Codex, and other MCP-compatible agents.")
-    .action(async () => {
-    await serveMcp();
+    .action(async (_options, command) => {
+    const explicitRoot = explicitProjectRoot(command);
+    await serveMcp(explicitRoot);
 });
 program
     .command("skill-path")
@@ -386,9 +401,10 @@ program
     .command("install-skill")
     .description("Copy the bundled agent skill and MCP config snippet into the current repository.")
     .option("--target-dir <path>", "Directory where the skill folder should be copied.", ".mimir/skills")
-    .action(async (options) => {
-    const result = await installSkill({ cwd: process.cwd(), targetDir: options.targetDir });
-    const doctorCommand = await kbCommand(process.cwd(), ["doctor"]);
+    .action(async (options, command) => {
+    const cwd = projectRoot(command);
+    const result = await installSkill({ cwd, targetDir: options.targetDir });
+    const doctorCommand = await kbCommand(cwd, ["doctor"]);
     console.log("Installed Mimir agent kit:");
     for (const file of result.written) {
         console.log(`  - ${file}`);
@@ -416,11 +432,12 @@ program
     .option("--scope <scope>", "Install scope: project or user.", "project")
     .option("--mode <mode>", "Expose skills as links or physical copies: link or copy.", "link")
     .option("--json", "Print machine-readable JSON.")
-    .action(async (options) => {
+    .action(async (options, command) => {
+    const cwd = projectRoot(command);
     const scope = parseAgentInstallScope(options.scope);
     const mode = parseAgentInstallMode(options.mode);
     const agents = parseAgentTargets(options.agents);
-    const result = await installAgentSkills({ cwd: process.cwd(), agents, scope, mode });
+    const result = await installAgentSkills({ cwd, agents, scope, mode });
     if (options.json) {
         console.log(JSON.stringify(result, null, 2));
         return;
@@ -442,7 +459,7 @@ program
     console.log("  1. Keep editing the canonical skills under .mimir/skills/.");
     console.log("  2. Restart or reload the selected agent so it discovers the exposed SKILL.md files.");
     console.log("  3. Wire the matching MCP helper if the agent should call Mimir tools directly.");
-    console.log(`  4. Run \`${(await kbCommand(process.cwd(), ["doctor"])).display}\`.`);
+    console.log(`  4. Run \`${(await kbCommand(cwd, ["doctor"])).display}\`.`);
 });
 try {
     await program.parseAsync(process.argv);
@@ -465,8 +482,15 @@ function parseNumber(value) {
     }
     return parsed;
 }
-function withTopK(topK) {
-    return topK === undefined ? { cwd: process.cwd() } : { cwd: process.cwd(), topK };
+function projectRoot(command) {
+    return explicitProjectRoot(command) ?? process.cwd();
+}
+function explicitProjectRoot(command) {
+    const options = command.optsWithGlobals();
+    return options.projectRoot ? path.resolve(options.projectRoot) : undefined;
+}
+function withTopK(cwd, topK) {
+    return topK === undefined ? { cwd } : { cwd, topK };
 }
 async function loadTts() {
     const module = await import(TTS_PACKAGE_NAME);

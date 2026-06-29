@@ -62,6 +62,16 @@ try {
     throw new Error(`status --json should expose chunksIndexed, got ${statusJson.chunksIndexed}`)
   }
 
+  const explicitRootStatusJson = parseJson(
+    (await runKb(["--project-root", tempRoot, "status", "--json"], repoRoot)).stdout,
+    "explicit project root status JSON",
+  )
+  if (explicitRootStatusJson.projectRoot !== tempRoot) {
+    throw new Error(
+      `--project-root should scope status to ${tempRoot}, got ${explicitRootStatusJson.projectRoot}`,
+    )
+  }
+
   const ingestJson = parseJson((await runKb(["ingest", "--json"], tempRoot)).stdout, "ingest JSON")
   if (!Array.isArray(ingestJson.errors) || ingestJson.errors.length !== 0) {
     throw new Error(`ingest --json should expose an empty errors array, got ${ingestJson.errors}`)

@@ -52,6 +52,7 @@ Mimir ships two CLIs:
 
 | Option | Applies to | Meaning |
 | --- | --- | --- |
+| `--project-root <path>` | all project-scoped `kb` commands | Run against a specific local workspace instead of the current directory. |
 | `--top-k <number>` | `search`, `ask` | Number of passages to return. |
 | `--json` | `doctor`, `ingest`, `search`, `ask`, `audit`, `status`, `security-audit`, `audio --doctor`, `mimir-tts doctor` | Print machine-readable JSON. |
 | `--unsupported` | `audit` | List skipped file paths and reasons. |
