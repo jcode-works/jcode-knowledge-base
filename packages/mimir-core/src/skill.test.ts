@@ -100,6 +100,8 @@ describe("installSkill", () => {
     expect(first.written).toContain(path.join(".mimir", "agent-setup.md"))
     expect(gitignore.match(/^\.kb\/$/gm)).toHaveLength(1)
     expect(gitignore.match(/^\.mimir\/$/gm)).toHaveLength(1)
+    expect(gitignore.match(/^private\/\*\*$/gm)).toHaveLength(1)
+    expect(gitignore).not.toContain("!private/")
   })
 
   it("uses the target repository package manager in generated MCP config", async () => {

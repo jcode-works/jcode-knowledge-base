@@ -1,21 +1,12 @@
 import { existsSync } from "node:fs"
 import { readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
-import {
-  KB_GITIGNORE_ENTRY,
-  MIMIR_GITIGNORE_ENTRY,
-  PRIVATE_DIR,
-  PRIVATE_GITIGNORE_ENTRY,
-} from "./defaults.js"
+import { KB_GITIGNORE_ENTRY, MIMIR_GITIGNORE_ENTRY, PRIVATE_GITIGNORE_ENTRY } from "./defaults.js"
 
 export const MIMIR_GITIGNORE_ENTRIES = [
   KB_GITIGNORE_ENTRY,
   MIMIR_GITIGNORE_ENTRY,
   PRIVATE_GITIGNORE_ENTRY,
-  `!${PRIVATE_DIR}/`,
-  `!${PRIVATE_DIR}/README.md`,
-  `!${PRIVATE_DIR}/**/`,
-  `!${PRIVATE_DIR}/**/.gitkeep`,
 ]
 
 export async function ensureMimirGitignore(cwd = process.cwd()): Promise<boolean> {
