@@ -85,7 +85,7 @@ function nextActions(input) {
             steps.push("Run `mimir audit --unsupported` to inspect files skipped because their type is not supported.");
         }
         if (input.embeddingProvider === "local-hash") {
-            steps.push(`For natural-language Q&A, run \`${input.run(["models", "pull"])}\`, set embeddingProvider=transformers, then run \`${input.run(["ingest", "--rebuild"])}\`.`);
+            steps.push(`For natural-language Q&A, run \`${input.run(["models", "pull", "--enable"])}\`, then run \`${input.run(["ingest", "--rebuild"])}\`.`);
         }
         steps.push(`Run \`${input.run(["search", '"your question"'])}\` to retrieve source passages.`);
         steps.push(`Run \`${input.run(["ask", '"your question"'])}\` to produce cited retrieval context.`);

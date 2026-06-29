@@ -12,6 +12,7 @@ import { serveMcp } from "./mcp.js"
 import { kbCommand } from "./package-manager.js"
 import { ask, search } from "./query.js"
 import { securityAudit } from "./security.js"
+import { enableSemanticEmbeddings } from "./semantic-config.js"
 import { setupProject } from "./setup.js"
 import {
   type AgentInstallMode,
@@ -42,24 +43,35 @@ const modelsCommand = program.command("models").description("Manage local embedd
 modelsCommand
   .command("pull")
   .description("Download the configured Transformers.js embedding model into embeddingModelPath.")
+  .option("--enable", "Switch .kb/config.json to Transformers embeddings after the model is ready.")
   .option("--json", "Print machine-readable JSON.")
-  .action(async (options: { json?: boolean }, command: Command) => {
+  .action(async (options: { enable?: boolean; json?: boolean }, command: Command) => {
     const cwd = projectRoot(command)
     const config = await loadConfig(cwd)
     const result = await pullEmbeddingModel(config)
+    const semanticConfig = options.enable ? await enableSemanticEmbeddings(cwd) : null
     if (options.json) {
-      console.log(JSON.stringify(result, null, 2))
+      console.log(JSON.stringify(semanticConfig ? { ...result, semanticConfig } : result, null, 2))
       return
     }
 
     console.log(pc.green("Embedding model ready."))
     console.log(`embeddingModel=${result.embeddingModel}`)
     console.log(`embeddingModelPath=${result.embeddingModelPath}`)
+    if (semanticConfig) {
+      console.log(`semanticConfig=${semanticConfig.configPath}`)
+      console.log(`embeddingProvider=${semanticConfig.embeddingProvider}`)
+      console.log(`transformersAllowRemoteModels=${semanticConfig.transformersAllowRemoteModels}`)
+    }
     console.log("")
     console.log("Next steps:")
-    console.log("  1. Set `embeddingProvider` to `transformers` in .kb/config.json.")
-    console.log("  2. Keep `transformersAllowRemoteModels` false for confidential indexing.")
-    console.log("  3. Run `mimir ingest --rebuild` so existing vectors use the semantic model.")
+    if (semanticConfig) {
+      console.log("  1. Run `mimir ingest --rebuild` so existing vectors use the semantic model.")
+      console.log("  2. Run `mimir doctor` to confirm readiness.")
+    } else {
+      console.log("  1. Re-run `mimir models pull --enable` to switch .kb/config.json safely.")
+      console.log("  2. Run `mimir ingest --rebuild` so existing vectors use the semantic model.")
+    }
   })
 
 program

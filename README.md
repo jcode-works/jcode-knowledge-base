@@ -314,14 +314,15 @@ Use this when you want better semantic retrieval while keeping Mimir core free o
 Commands:
 
 ```bash
-pnpm exec mimir models pull
+pnpm exec mimir models pull --enable
 pnpm exec mimir ingest
 pnpm exec mimir ask "Which passages support offline operation?"
 ```
 
 `mimir models pull` intentionally allows a one-time download from Hugging Face into
-`embeddingModelPath`. Keep `transformersAllowRemoteModels` false for confidential or air-gapped
-indexing after the model files are present. Re-run `mimir ingest --rebuild` after changing embedding
+`embeddingModelPath`. With `--enable`, it also switches `.kb/config.json` to
+`embeddingProvider: "transformers"` while keeping `transformersAllowRemoteModels` false for
+confidential or air-gapped indexing. Re-run `mimir ingest --rebuild` after changing embedding
 provider or model so stored vectors match the active configuration.
 
 ## Agent Skills And MCP
@@ -559,8 +560,9 @@ Mimir ships two CLIs:
 - `mimir-tts`: the standalone text-to-speech renderer used by `mimir audio`.
 
 Most users start with `mimir setup`, `mimir doctor`, `mimir ingest`, `mimir search`, `mimir ask`, and
-`mimir security-audit`. Use `mimir models pull` before semantic offline ingestion when remote model
-download is acceptable, and `mimir ingest --rebuild` after switching embedding provider or model.
+`mimir security-audit`. Use `mimir models pull --enable` before semantic offline ingestion when
+remote model download is acceptable, and `mimir ingest --rebuild` after switching embedding provider
+or model.
 
 The full command and option table lives in [`docs/cli-reference.md`](./docs/cli-reference.md).
 

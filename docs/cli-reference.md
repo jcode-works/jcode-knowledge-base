@@ -14,6 +14,7 @@ Mimir ships two CLIs:
 | `mimir doctor` | Diagnose setup, index freshness, security warnings, and the next command to run. |
 | `mimir doctor --fix` | Create missing scaffolding, install skills/MCP config, and update stale indexes when safe. |
 | `mimir models pull` | Download the configured Transformers.js embedding model into `embeddingModelPath`. |
+| `mimir models pull --enable` | Download the embedding model and switch `.kb/config.json` to safe Transformers embeddings. |
 | `mimir ingest` | Parse changed source files, redact, chunk, embed, and update the local LanceDB index. |
 | `mimir ingest --rebuild` | Force a full re-index, required after switching embedding provider or model. |
 | `mimir audit` | Check whether supported source files are missing from or stale in the index. |

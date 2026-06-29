@@ -3,6 +3,7 @@ import os from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { doctor } from "./doctor.js"
+import { ingest } from "./ingest.js"
 import { initProject } from "./init.js"
 
 const tempDirs: string[] = []
@@ -42,6 +43,20 @@ describe("doctor", () => {
     expect(withEvidence.chunksIndexed).toBe(0)
     expect(withEvidence.nextSteps).toContain(
       "Run `pnpm exec mimir doctor --fix` to rebuild stale or missing index data.",
+    )
+  })
+
+  it("recommends the semantic setup shortcut after the index is ready", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mimir-doctor-"))
+    tempDirs.push(root)
+
+    await initProject(root)
+    await writeFile(path.join(root, "private", "evidence.md"), "Local evidence.\n", "utf8")
+    await ingest({ cwd: root })
+    const ready = await doctor(root)
+
+    expect(ready.nextSteps).toContain(
+      "For natural-language Q&A, run `pnpm exec mimir models pull --enable`, then run `pnpm exec mimir ingest --rebuild`.",
     )
   })
 })

@@ -82,7 +82,7 @@ working offline:
 When remote download is acceptable, preload the configured embedding model first:
 
 ```bash
-pnpm exec mimir models pull
+pnpm exec mimir models pull --enable
 ```
 
 Switching providers requires a full re-ingest:

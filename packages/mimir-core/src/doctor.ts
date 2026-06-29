@@ -122,7 +122,7 @@ function nextActions(input: NextActionInput): string[] {
     }
     if (input.embeddingProvider === "local-hash") {
       steps.push(
-        `For natural-language Q&A, run \`${input.run(["models", "pull"])}\`, set embeddingProvider=transformers, then run \`${input.run(["ingest", "--rebuild"])}\`.`,
+        `For natural-language Q&A, run \`${input.run(["models", "pull", "--enable"])}\`, then run \`${input.run(["ingest", "--rebuild"])}\`.`,
       )
     }
     steps.push(`Run \`${input.run(["search", '"your question"'])}\` to retrieve source passages.`)

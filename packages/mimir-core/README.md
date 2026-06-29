@@ -50,8 +50,8 @@ ingestion, stores generated state under `.kb/`, and keeps agent integration file
 `mimir setup` adds the matching Git ignore entries for local generated and private data.
 
 Run `pnpm exec mimir doctor --fix` later to repair missing setup or rebuild stale indexes.
-For better semantic Q&A, run `pnpm exec mimir models pull`, switch `.kb/config.json` to
-`embeddingProvider: "transformers"`, then run `pnpm exec mimir ingest --rebuild`.
+For better semantic Q&A, run `pnpm exec mimir models pull --enable`, then run
+`pnpm exec mimir ingest --rebuild`.
 
 ## Entry Points
 

@@ -10,6 +10,7 @@ export { detectPackageManager, kbCommand } from "./package-manager.js"
 export { ask, search } from "./query.js"
 export { redactText } from "./redaction.js"
 export { securityAudit } from "./security.js"
+export { enableSemanticEmbeddings } from "./semantic-config.js"
 export type { SetupResult } from "./setup.js"
 export { setupProject } from "./setup.js"
 export type {
