@@ -34,7 +34,6 @@ const program = new Command()
 
 program
   .name("mimir")
-  .alias("kb")
   .description("Local-first RAG knowledge base for private project documents.")
   .version(VERSION)
   .option("--project-root <path>", "Run project-scoped commands against this local workspace.")
