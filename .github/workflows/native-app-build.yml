@@ -35,10 +35,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
+      - name: Install mise
+        run: |
+          curl https://mise.run | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/share/mise/shims" >> "$GITHUB_PATH"
+
+      - name: Install pinned Node via mise
+        run: mise install
 
       - name: Set up pnpm
         run: |
@@ -78,10 +82,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
+      - name: Install mise
+        run: |
+          curl https://mise.run | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/share/mise/shims" >> "$GITHUB_PATH"
+
+      - name: Install pinned Node via mise
+        run: mise install
 
       - name: Set up pnpm
         run: |
@@ -121,10 +129,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
+      - name: Install mise
+        shell: bash
+        run: |
+          curl https://mise.run | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/share/mise/shims" >> "$GITHUB_PATH"
+
+      - name: Install pinned Node via mise
+        shell: bash
+        run: mise install
 
       - name: Set up pnpm
         shell: bash
