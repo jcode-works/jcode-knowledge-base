@@ -144,6 +144,12 @@
   `KB_PDF_OCR_COMMAND` and `KB_IMAGE_OCR_COMMAND` remain legacy aliases only.
 - Keep the repository as a simple pnpm workspace monorepo. Add Turbo only if multiple packages or
   apps start needing task caching/orchestration beyond `pnpm --filter`.
+- The Node.js version is pinned once, in `mise.toml` (via [mise](https://mise.jdx.dev/)), and CI
+  (`ci.yml`, `native-app-build.yml`) installs it through `jdx/mise-action`. Bump the version there
+  only, not as a hardcoded `node-version` in individual workflow steps. `npm-publish.yml` keeps
+  `actions/setup-node` instead, because that step also wires the npm registry `.npmrc` for
+  publishing; keep its `node-version` in sync with `mise.toml` by hand. pnpm stays pinned via
+  Corepack through `packageManager` in `package.json`, not duplicated in `mise.toml`.
 - Keep Mimir core free of Ollama. `embeddingProvider: "local-hash"` supports ingestion, search, MCP,
   and cited retrieval without a model server, but it must not be described as equivalent to semantic
   retrieval. `embeddingProvider: "transformers"` is the optional semantic embedding path.

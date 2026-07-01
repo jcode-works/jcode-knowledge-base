@@ -1,0 +1,10 @@
+[tools]
+node = "22"
+
+[settings]
+experimental = true
+
+[hooks]
+# Enables corepack after `mise install` so pnpm resolves to the version pinned
+# in package.json's `packageManager` field, without duplicating that version here.
+postinstall = "npx corepack enable"
