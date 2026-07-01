@@ -269,6 +269,12 @@ Fresh setup keeps local state under one ignored `.mimir/` folder:
 
 It detects the repository package manager and writes the MCP helper files with the right command:
 `pnpm exec mimir serve-mcp`, `npx mimir serve-mcp`, `yarn exec mimir serve-mcp`, or `bunx mimir serve-mcp`.
+When a repository needs a wrapper script or only a subset of agent helpers, make that explicit during
+setup:
+
+```bash
+pnpm exec mimir setup --agents claude,codex --mcp-name project-docs --mcp-command ./scripts/serve-mcp.sh
+```
 
 For the usual agent-first workflow, expose Mimir to the coding assistants used in the repository:
 
@@ -467,7 +473,15 @@ Use `mimir setup` for the normal path, or install only the agent layer later:
 
 ```bash
 pnpm exec mimir install-skill
+pnpm exec mimir install-skill --agents claude,codex --mcp-command ./scripts/serve-mcp.sh
 pnpm exec mimir install-agent --agents claude,codex,kimi,opencode,cline
+```
+
+The bundled skill is also directly installable from this repository with the
+[skills.sh](https://skills.sh) CLI, without adding Mimir as a dependency first:
+
+```bash
+npx skills add https://github.com/jcode-works/jcode-mimir/tree/main/packages/mimir-core/skills/mimir
 ```
 
 Main agent examples:
@@ -905,6 +919,8 @@ pnpm --dir packages/mimir-core pack
   checkout, webhook, and local-license architecture for future commercial app distribution.
 - [`docs/ux-dx-audit.md`](./docs/ux-dx-audit.md): current UX/DX findings, fixes, and remaining
   product risks.
+- [`llms.txt`](./llms.txt): LLM-oriented index of this repository's documentation, following the
+  [llms.txt](https://llmstxt.org/) convention; consumed by tools like Context7.
 
 ## License
 

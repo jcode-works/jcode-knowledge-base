@@ -49,6 +49,16 @@
   under real Mimir domains, private documents, generated `.pid` files, committed secrets, internal
   GTM/pricing ledgers, or wording that presents tracked MIT source as proprietary or closed source.
   `pnpm public:smoke` enforces the cheap checks.
+- Root `llms.txt` (the [llms.txt](https://llmstxt.org/) convention) and `context7.json` are the
+  LLM/Context7-facing doc index for this repository. Update `llms.txt` when adding or removing a
+  top-level `docs/*.md` file worth surfacing to agents, and keep `context7.json`'s
+  `excludeFolders`/`excludeFiles` in sync with new generated-output or private-data directories.
+  Registering the repo on context7.com (so it resolves through `resolve-library-id`) is a manual
+  step on their site; these files only prepare the repo for that step.
+- The bundled `mimir` skill is directly installable from this monorepo's nested path with the
+  [skills.sh](https://skills.sh) CLI (`npx skills add <repo-url>/tree/main/packages/mimir-core/skills/mimir`),
+  since that CLI supports a direct subdirectory path. If `packages/mimir-core/skills/` moves, update
+  the command documented in the README's "Agent Skills And MCP" section.
 - `packages/mimir-ui` is the shared UI/style foundation adapted from the WorkoutGen landing/UI
   approach. It provides the common Tailwind theme and React primitives for both the landing and the
   Tauri app; do not import WorkoutGen product copy, assets, analytics, or secrets.
@@ -144,6 +154,15 @@
   `KB_PDF_OCR_COMMAND` and `KB_IMAGE_OCR_COMMAND` remain legacy aliases only.
 - Keep the repository as a simple pnpm workspace monorepo. Add Turbo only if multiple packages or
   apps start needing task caching/orchestration beyond `pnpm --filter`.
+- The Node.js version is pinned once, in `mise.toml` (via [mise](https://mise.jdx.dev/)). Bump the
+  version there only, not as a hardcoded `node-version` in individual workflow steps. CI
+  (`ci.yml`, `native-app-build.yml`) installs mise with the official `curl https://mise.run | sh`
+  script in a plain `run:` step, not the `jdx/mise-action` marketplace action — this repo's Actions
+  permissions are restricted to `actions/*`, `github/codeql-action/*`, and verified creators, and
+  `jdx/mise-action` does not qualify. `npm-publish.yml` keeps `actions/setup-node` instead, because
+  that step also wires the npm registry `.npmrc` for publishing; keep its `node-version` in sync
+  with `mise.toml` by hand. pnpm stays pinned via Corepack through `packageManager` in
+  `package.json`, not duplicated in `mise.toml`.
 - Keep Mimir core free of Ollama. `embeddingProvider: "local-hash"` supports ingestion, search, MCP,
   and cited retrieval without a model server, but it must not be described as equivalent to semantic
   retrieval. `embeddingProvider: "transformers"` is the optional semantic embedding path.
@@ -233,10 +252,14 @@ General principles (KISS, DRY, YAGNI, SOLID) as applied in this codebase. Match 
 - `packages/mimir-core/skills/mimir-audio-summary/SKILL.md` is the optional bundled audio-summary skill.
 - `packages/mimir-core/skills/mimir-markdown-report/SKILL.md` is the optional bundled Markdown-report
   skill.
-- `mimir setup` must keep generating agent-specific MCP helpers for easy local use:
+- `mimir setup` must keep generating agent-specific MCP helpers for easy local use by default:
   `.mimir/claude-mcp-server.json` for `claude mcp add-json`, `.mimir/codex-mcp.toml` for Codex
   config layers, `.mimir/kimi-mcp.json` for Kimi, `.mimir/opencode.jsonc` for OpenCode, and
-  `.mimir/cline-mcp.json` for Cline.
+  `.mimir/cline-mcp.json` for Cline. Keep `--agents` available on setup/install-skill so a target
+  repository can generate only the helpers it uses and remove stale unselected helpers.
+- Keep `--mcp-name`, `--mcp-command`, and repeatable `--mcp-arg` available on setup/install-skill
+  so repositories can generate MCP helper files for a stable server name or local wrapper script
+  without post-processing `.mimir/`.
 - `mimir install-agent` owns native skill discovery for the main supported coding agents. Keep
   `--agents claude|codex|kimi|opencode|cline` targeted so a user can install only the agent they use,
   with project scope by default and user scope available through `--scope user`.

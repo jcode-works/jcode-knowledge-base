@@ -4,12 +4,16 @@ Mimir is an open-source project under the MIT License. Issues and pull requests 
 
 ## Development
 
-Use Node.js 20+ and pnpm:
+This repo pins its Node.js version with [mise](https://mise.jdx.dev/) (see `mise.toml`), the same
+version CI uses. Install mise, then:
 
 ```bash
+mise install
 pnpm install
 pnpm validate
 ```
+
+Without mise, any Node.js 20+ and pnpm install works too.
 
 `pnpm validate` runs Biome, a dependency security audit, TypeScript, Vitest, the production CLI/MCP
 smoke test, and npm package metadata checks.
