@@ -1,8 +1,11 @@
 import path from "node:path";
+import { loadConfig } from "./config.js";
 import { doctor } from "./doctor.js";
+import { pullEmbeddingModel } from "./embeddings.js";
 import { ingest } from "./ingest.js";
 import { initProject } from "./init.js";
 import { mimirCommand } from "./package-manager.js";
+import { enableSemanticEmbeddings } from "./semantic-config.js";
 import { installSkill } from "./skill.js";
 export async function setupProject(options = {}) {
     const cwd = path.resolve(options.cwd ?? process.cwd());
@@ -24,6 +27,7 @@ export async function setupProject(options = {}) {
         installOptions.mcpArgs = options.mcpArgs;
     }
     const agentKit = await installSkill(installOptions);
+    const semantic = options.semantic ? await setupSemanticEmbeddings(cwd) : null;
     let report = await doctor(cwd);
     let ingested = null;
     if (options.ingest !== false && canAutoIngest(report)) {
@@ -37,9 +41,19 @@ export async function setupProject(options = {}) {
         runCommand: command.display,
         created,
         agentKit,
+        semantic,
         ingested,
         doctor: report,
         nextSteps: setupNextSteps(report),
+    };
+}
+async function setupSemanticEmbeddings(cwd) {
+    const config = await loadConfig(cwd);
+    const model = await pullEmbeddingModel(config);
+    const semanticConfig = await enableSemanticEmbeddings(cwd);
+    return {
+        model,
+        config: semanticConfig,
     };
 }
 function canAutoIngest(report) {

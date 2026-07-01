@@ -15,5 +15,6 @@ export { securityAudit } from "./security.js";
 export { enableSemanticEmbeddings } from "./semantic-config.js";
 export { setupProject } from "./setup.js";
 export { bundledSkillPath, installAgentSkills, installSkill, parseAgentTargets, SUPPORTED_AGENT_TARGETS, } from "./skill.js";
+export { addSourceEntries, listSourceEntries } from "./sources.js";
 export { VERSION } from "./version.js";
 //# sourceMappingURL=index.js.map

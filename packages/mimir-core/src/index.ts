@@ -14,7 +14,7 @@ export { redactText } from "./redaction.js"
 export { compactResearchReport, compactSearchResults, research } from "./research.js"
 export { securityAudit } from "./security.js"
 export { enableSemanticEmbeddings } from "./semantic-config.js"
-export type { SetupOptions, SetupResult } from "./setup.js"
+export type { SetupOptions, SetupResult, SetupSemanticResult } from "./setup.js"
 export { setupProject } from "./setup.js"
 export type {
   AgentHelperFile,
@@ -34,6 +34,12 @@ export {
   parseAgentTargets,
   SUPPORTED_AGENT_TARGETS,
 } from "./skill.js"
+export type {
+  AddSourceEntriesOptions,
+  AddSourceEntriesResult,
+  SourceEntriesResult,
+} from "./sources.js"
+export { addSourceEntries, listSourceEntries } from "./sources.js"
 export type {
   AccessLogAction,
   AccessLogUsageOptions,

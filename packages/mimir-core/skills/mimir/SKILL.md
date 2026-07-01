@@ -29,7 +29,7 @@ Default project layout:
 ## Data Safety
 
 - Do not commit raw documents, secrets, tax IDs, scans, bank documents, tokens, or generated vector stores.
-- Keep `.mimir/` ignored by Git. Legacy projects using `private/**` or `.kb/` must keep those paths
+- Keep `.mimir/` ignored by Git. Legacy projects using `private/`, `private/**`, or `.kb/` must keep those paths
   ignored too.
 - Treat `mimir search`, `mimir ask`, `mimir research`, and MCP results as sensitive because they can
   contain private source passages even when redaction is enabled.
@@ -55,6 +55,8 @@ If Mimir is not installed:
 ```bash
 pnpm add -D @jcode.labs/mimir
 pnpm exec mimir setup
+# Optional: one-time model download for higher-quality semantic retrieval.
+pnpm exec mimir setup --semantic
 ```
 
 When the repository should expose only specific agent helpers or must launch MCP through a local
@@ -69,6 +71,8 @@ If the package manager is npm:
 ```bash
 npm install --save-dev @jcode.labs/mimir
 npx mimir setup
+# Optional: one-time model download for higher-quality semantic retrieval.
+npx mimir setup --semantic
 ```
 
 Use `status`, `audit`, and `security-audit` for deeper checks after `doctor` explains the current
@@ -115,10 +119,18 @@ Optional semantic embedding mode:
 ```
 
 This uses Transformers.js for embeddings only. Keep `transformersAllowRemoteModels` false for
-air-gapped or confidential work and preload model files under `embeddingModelPath`:
+air-gapped or confidential work and preload model files under `embeddingModelPath`. Use the
+first-run shortcut when a one-time download is acceptable:
 
 ```bash
-pnpm exec mimir models pull
+pnpm exec mimir setup --semantic
+pnpm exec mimir ingest --rebuild
+```
+
+Or enable it later:
+
+```bash
+pnpm exec mimir models pull --enable
 pnpm exec mimir ingest --rebuild
 ```
 
@@ -143,6 +155,23 @@ the security audit should not show warnings before relying on Mimir for sensitiv
 
 Default retrieval is tuned for broader recall (`topK: 8`, `chunkOverlap: 200`). Keep MCP retrieval
 bounded by `mcpMaxTopK`, and raise `--top-k` only when the first results are too narrow.
+
+For monorepos, keep raw confidential files local and list useful repo docs through `.mimir/sources.txt`.
+Entries can be paths or glob patterns relative to the Mimir project root, with `!` exclusions:
+
+```plain text
+../apps/*/README.md
+../apps/*/docs/**/*.md
+!../apps/**/node_modules/**
+```
+
+Use the CLI when you want agents or setup scripts to update the file without manual editing:
+
+```bash
+pnpm exec mimir sources add "../apps/*/README.md" "../apps/*/docs/**/*.md"
+pnpm exec mimir sources add "!../apps/**/node_modules/**"
+pnpm exec mimir sources list
+```
 
 ## Query Workflow
 
@@ -231,7 +260,8 @@ For OpenCode, merge `.mimir/opencode.jsonc` into the OpenCode config layer used 
 For Cline, add `.mimir/cline-mcp.json` under `mcpServers` in Cline's MCP configuration.
 
 For other MCP clients that cannot set `cwd`, set `MIMIR_PROJECT_ROOT=/absolute/path/to/repository`
-when launching `mimir serve-mcp`.
+when launching `mimir serve-mcp`. `MIMIR_PROJECT_ROOT` is the strongest signal; otherwise a
+configured current working directory wins before agent-provided project environment variables.
 
 Available MCP tools:
 

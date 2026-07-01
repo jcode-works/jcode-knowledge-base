@@ -2,8 +2,13 @@ import { existsSync } from "node:fs"
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { setupProject } from "./setup.js"
+
+vi.mock("@huggingface/transformers", () => ({
+  env: {},
+  pipeline: async () => async () => ({}),
+}))
 
 const tempDirs: string[] = []
 
@@ -26,9 +31,37 @@ describe("setupProject", () => {
     expect(result.created).toContain(path.join(".mimir", "config.json"))
     expect(result.doctor.initialized).toBe(true)
     expect(result.doctor.agentKitInstalled).toBe(true)
+    expect(result.semantic).toBeNull()
     expect(result.ingested).toBeNull()
     expect(mcpConfig.mcpServers.mimir.command).toBe("pnpm")
     expect(mcpConfig.mcpServers.mimir.args).toEqual(["exec", "mimir", "serve-mcp"])
+  })
+
+  it("can preload and enable semantic embeddings during setup", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mimir-setup-semantic-"))
+    tempDirs.push(root)
+
+    const result = await setupProject({ cwd: root, ingest: false, semantic: true })
+    const config = JSON.parse(await readFile(path.join(root, ".mimir", "config.json"), "utf8")) as {
+      embeddingProvider: string
+      embeddingModelPath: string
+      transformersAllowRemoteModels: boolean
+    }
+
+    expect(result.semantic).toMatchObject({
+      model: {
+        embeddingModel: "mixedbread-ai/mxbai-embed-xsmall-v1",
+        embeddingModelPath: path.join(root, ".mimir/models"),
+      },
+      config: {
+        embeddingProvider: "transformers",
+        embeddingModelPath: ".mimir/models",
+        transformersAllowRemoteModels: false,
+      },
+    })
+    expect(config.embeddingProvider).toBe("transformers")
+    expect(config.embeddingModelPath).toBe(".mimir/models")
+    expect(config.transformersAllowRemoteModels).toBe(false)
   })
 
   it("auto-ingests supported files when the privacy posture is clean", async () => {

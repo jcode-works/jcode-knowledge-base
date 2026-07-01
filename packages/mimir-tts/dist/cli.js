@@ -34,6 +34,7 @@ async function runDoctor(args) {
     printKeyValue("defaultEngine", report.defaultEngine);
     printKeyValue("defaultModel", report.defaultModel);
     printKeyValue("defaultModelPath", report.defaultModelPath);
+    printKeyValue("defaultAllowRemoteModels", String(report.defaultAllowRemoteModels));
     printKeyValue("edgeTtsAvailable", String(report.edgeTtsAvailable));
     printKeyValue("edgeDefaultVoice", report.edgeDefaultVoice);
     printKeyValue("transformersAvailable", String(report.transformersAvailable));

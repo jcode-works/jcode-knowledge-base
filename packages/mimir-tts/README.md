@@ -20,27 +20,29 @@ It supports two explicit paths:
 - Edge TTS MP3 for higher-quality online narration when sending the text to Edge TTS is acceptable.
 
 It does not require Python, ffmpeg, Piper, XTTS, or a local model server for the default
-Transformers.js path.
+Transformers.js path. Remote model downloads are disabled by default; use `--allow-remote-models`
+only for an explicit non-sensitive preload.
 
 ## Install
 
 ```bash
-pnpm add -D @jcode.labs/mimir-tts
+npm install --save-dev @jcode.labs/mimir-tts
 ```
 
 ## Quick Start
 
 ```bash
-pnpm exec mimir-tts doctor --json
-pnpm exec mimir-tts render /tmp/summary.txt --offline --out .mimir/audio/summary.wav
-pnpm exec mimir-tts render /tmp/summary.txt --engine edge --out .mimir/audio/summary.mp3
+npx mimir-tts doctor --json
+npx mimir-tts render /tmp/summary.txt --offline --out .mimir/audio/summary.wav
+npx mimir-tts render /tmp/summary.txt --engine edge --out .mimir/audio/summary.mp3
 ```
 
 The default engine is `transformers` for offline/confidential WAV output. Use `--engine edge` only
 when sending narration text to online Edge TTS is acceptable.
 
-For fully offline use, preload the Transformers.js model with non-sensitive text before rendering
-confidential narration. See the root `docs/offline-tts-preload.md` guide.
+For first-time setup, preload the Transformers.js model with non-sensitive text and
+`--allow-remote-models` before rendering confidential narration. See the root
+`docs/offline-tts-preload.md` guide.
 
 ## License
 

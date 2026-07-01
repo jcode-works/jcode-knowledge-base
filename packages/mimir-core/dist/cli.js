@@ -18,6 +18,7 @@ import { securityAudit } from "./security.js";
 import { enableSemanticEmbeddings } from "./semantic-config.js";
 import { setupProject } from "./setup.js";
 import { bundledSkillPath, installAgentSkills, installSkill, parseAgentTargets, SUPPORTED_AGENT_TARGETS, } from "./skill.js";
+import { addSourceEntries, listSourceEntries } from "./sources.js";
 import { countRows } from "./store.js";
 import { VERSION } from "./version.js";
 const SEARCH_TEXT_PREVIEW_LENGTH = 900;
@@ -93,6 +94,7 @@ program
     .option("--mcp-name <name>", "MCP server name used in generated config.", "mimir")
     .option("--mcp-command <command>", "Custom MCP stdio command for generated helper files.")
     .option("--mcp-arg <arg>", "Argument for --mcp-command. Repeat for multiple arguments.", collectOptionValue, [])
+    .option("--semantic", "Download the configured Transformers.js embedding model and enable higher-quality semantic retrieval.")
     .option("--no-ingest", "Skip automatic indexing even when supported files are present.")
     .option("--json", "Print machine-readable JSON.")
     .action(async (options, command) => {
@@ -103,6 +105,7 @@ program
         agents: parseAgentTargets(options.agents),
         mcpServerName: options.mcpName,
     };
+    addOption(setupOptions, "semantic", options.semantic);
     addOption(setupOptions, "ingest", options.ingest);
     addOption(setupOptions, "mcpCommand", options.mcpCommand);
     if (options.mcpArg.length > 0) {
@@ -140,6 +143,50 @@ program
     console.log(`  2. Run \`${ingestCommand.display}\``);
     console.log(`  3. Run \`${doctorCommand.display}\``);
     console.log(`  4. Query with \`${searchCommand.display}\``);
+});
+const sourcesCommand = program
+    .command("sources")
+    .description("Manage extra source paths and glob patterns in .mimir/sources.txt.");
+sourcesCommand
+    .command("list")
+    .description("List extra source paths and glob patterns.")
+    .option("--json", "Print machine-readable JSON.")
+    .action(async (options, command) => {
+    const cwd = projectRoot(command);
+    const result = await listSourceEntries(cwd);
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+    console.log(`sourcesFile=${path.relative(cwd, result.sourcesFile) || result.sourcesFile}`);
+    if (result.entries.length === 0) {
+        console.log("No extra source entries.");
+        console.log('Add one with `mimir sources add "../apps/*/docs/**/*.md"`.');
+        return;
+    }
+    for (const entry of result.entries) {
+        console.log(`  - ${entry}`);
+    }
+});
+sourcesCommand
+    .command("add")
+    .description("Add extra source paths or glob patterns.")
+    .argument("<entries...>", "Source paths, glob patterns, or ! exclusion patterns.")
+    .option("--json", "Print machine-readable JSON.")
+    .action(async (entries, options, command) => {
+    const cwd = projectRoot(command);
+    const result = await addSourceEntries({ cwd, entries });
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+    console.log(`sourcesFile=${path.relative(cwd, result.sourcesFile) || result.sourcesFile}`);
+    for (const entry of result.added) {
+        console.log(pc.green(`added ${entry}`));
+    }
+    for (const entry of result.skipped) {
+        console.log(pc.dim(`skipped existing ${entry}`));
+    }
 });
 program
     .command("ingest")
@@ -816,6 +863,18 @@ function printSetup(result, title) {
         console.log(`  - ${helper.label} MCP helper: ${helper.path}`);
     }
     console.log(`  - agent setup guide: ${result.agentKit.agentSetupPath}`);
+    console.log("");
+    if (result.semantic) {
+        console.log(pc.cyan("Semantic retrieval:"));
+        console.log("  - enabled for higher-quality natural-language retrieval");
+        console.log(`  - embedding model: ${result.semantic.model.embeddingModel}`);
+        console.log(`  - model path: ${result.semantic.model.embeddingModelPath}`);
+        console.log("  - remote model loading after setup: false");
+    }
+    else {
+        console.log(pc.cyan("Semantic retrieval:"));
+        console.log("  - skipped; default local-hash retrieval is fully local but not semantic. Run `mimir setup --semantic` or `mimir models pull --enable` when a one-time model download is acceptable.");
+    }
     console.log("");
     console.log(pc.cyan("Index:"));
     if (result.ingested) {

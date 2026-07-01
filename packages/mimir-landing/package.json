@@ -6,12 +6,12 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "build": "astro check && astro build",
+    "build": "node scripts/astro-no-telemetry.mjs check && node scripts/astro-no-telemetry.mjs build",
     "cf:dry-run": "pnpm build && wrangler deploy --dry-run",
     "cf:preview": "pnpm build && wrangler dev --local --port 8787",
-    "check": "astro check",
-    "dev": "astro dev",
-    "preview": "astro preview"
+    "check": "node scripts/astro-no-telemetry.mjs check",
+    "dev": "node scripts/astro-no-telemetry.mjs dev",
+    "preview": "node scripts/astro-no-telemetry.mjs preview"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.9",

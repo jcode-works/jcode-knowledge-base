@@ -1,9 +1,10 @@
+import { existsSync } from "node:fs"
 import path from "node:path"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod"
 import { accessLogUsageReport } from "./access-log.js"
-import { loadConfig } from "./config.js"
+import { findProjectConfig, loadConfig } from "./config.js"
 import { evaluateGoldenQueries } from "./evaluate.js"
 import { audit } from "./ingest.js"
 import { ask, search } from "./query.js"
@@ -186,7 +187,16 @@ export function resolveMcpProjectRoot(
   env: NodeJS.ProcessEnv = process.env,
   fallback = process.cwd(),
 ): string {
-  return env.MIMIR_PROJECT_ROOT ?? env.CLAUDE_PROJECT_DIR ?? fallback
+  if (env.MIMIR_PROJECT_ROOT) {
+    return env.MIMIR_PROJECT_ROOT
+  }
+
+  const fallbackConfig = findProjectConfig(fallback)
+  if (existsSync(fallbackConfig.configPath)) {
+    return fallbackConfig.projectRoot
+  }
+
+  return env.CLAUDE_PROJECT_DIR ?? fallback
 }
 
 function textResult(value: unknown): { content: Array<{ type: "text"; text: string }> } {

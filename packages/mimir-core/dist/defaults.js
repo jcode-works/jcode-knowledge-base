@@ -7,7 +7,8 @@ export const LEGACY_CONFIG_PATH = `${LEGACY_KB_DIR}/config.json`;
 export const DEFAULT_SKILL_TARGET_DIR = `${MIMIR_DIR}/skills`;
 export const MIMIR_GITIGNORE_ENTRY = `${MIMIR_DIR}/`;
 export const LEGACY_KB_GITIGNORE_ENTRY = `${LEGACY_KB_DIR}/`;
-export const LEGACY_PRIVATE_GITIGNORE_ENTRY = `${LEGACY_PRIVATE_DIR}/**`;
+export const LEGACY_PRIVATE_GITIGNORE_ENTRY = `${LEGACY_PRIVATE_DIR}/`;
+export const LEGACY_PRIVATE_GITIGNORE_FALLBACK_ENTRY = `${LEGACY_PRIVATE_DIR}/**`;
 export const DEFAULT_CONFIG = {
     rawDir: MIMIR_RAW_DIR,
     storageDir: `${MIMIR_DIR}/storage`,

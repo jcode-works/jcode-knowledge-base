@@ -21,7 +21,13 @@ export async function initProject(cwd = process.cwd()) {
     const sourcesPath = path.resolve(root, hasLegacyConfig && !hasConfig ? LEGACY_DEFAULT_CONFIG.sourcesFile : DEFAULT_CONFIG.sourcesFile);
     if (!existsSync(sourcesPath)) {
         await mkdir(path.dirname(sourcesPath), { recursive: true });
-        await writeFile(sourcesPath, "# Optional extra source paths, one per line. Relative paths resolve from the project root.\n", "utf8");
+        await writeFile(sourcesPath, [
+            "# Optional extra source paths or glob patterns, one per line.",
+            "# Relative paths resolve from the project root. Prefix glob exclusions with !.",
+            "# Example: ../apps/*/docs/**/*.md",
+            "# Example: !../apps/**/node_modules/**",
+            "",
+        ].join("\n"), "utf8");
         created.push(path.relative(root, sourcesPath));
     }
     if (!hasConfig && !hasLegacyConfig) {

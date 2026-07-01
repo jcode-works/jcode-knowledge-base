@@ -69,6 +69,8 @@ const DEFAULT_SUPPORTED_FILE_NAMES = new Set([
     "procfile",
     "rakefile",
 ]);
+const DEFAULT_FAST_GLOB_IGNORES = ["**/.git/**", "**/node_modules/**", "**/.kb/**", "**/.mimir/**"];
+const GLOB_PATTERN_CHARS = /[*?[{]/u;
 export const DEFAULT_SUPPORTED_EXTENSIONS = new Set([
     ".atom",
     ".adoc",
@@ -152,11 +154,58 @@ export async function listSourceFiles(config) {
     return (await inventorySourceFiles(config)).supportedFiles;
 }
 export async function inventorySourceFiles(config) {
-    const roots = await sourceRoots(config);
+    const inputs = await sourceInputs(config);
     const files = new Map();
     const skippedFiles = new Map();
     let discoveredFiles = 0;
-    for (const root of roots) {
+    const recordSourceFile = async (absolutePath, info, source) => {
+        const relativePath = path.relative(config.projectRoot, absolutePath);
+        if (GENERATED_SOURCE_READMES.has(relativePath)) {
+            return;
+        }
+        discoveredFiles += 1;
+        const extension = path.extname(absolutePath).toLowerCase();
+        const skipped = skippedSourceFile(absolutePath, relativePath, source, extension, info.size);
+        if (skipped) {
+            skippedFiles.set(absolutePath, skipped);
+            return;
+        }
+        if (!isSupportedSourceFile(absolutePath, extension, config)) {
+            const normalizedExtension = extension || NO_EXTENSION;
+            skippedFiles.set(absolutePath, {
+                relativePath,
+                source,
+                extension: normalizedExtension,
+                bytes: info.size,
+                reason: "unsupported-extension",
+                recommendation: skippedRecommendation("unsupported-extension", normalizedExtension),
+            });
+            return;
+        }
+        if (info.size > config.maxFileBytes) {
+            const normalizedExtension = extension || NO_EXTENSION;
+            skippedFiles.set(absolutePath, {
+                relativePath,
+                source,
+                extension: normalizedExtension,
+                bytes: info.size,
+                reason: "oversized",
+                recommendation: skippedRecommendation("oversized", normalizedExtension),
+            });
+            return;
+        }
+        const buffer = await readFile(absolutePath);
+        files.set(absolutePath, {
+            absolutePath,
+            relativePath,
+            source,
+            extension,
+            bytes: info.size,
+            mtimeMs: info.mtimeMs,
+            checksum: createHash("sha256").update(buffer).digest("hex"),
+        });
+    };
+    for (const root of inputs.roots) {
         if (!existsSync(root)) {
             continue;
         }
@@ -168,7 +217,7 @@ export async function inventorySourceFiles(config) {
                 onlyFiles: true,
                 dot: true,
                 followSymbolicLinks: false,
-                ignore: ["**/.git/**", "**/node_modules/**", "**/.kb/**", "**/.mimir/**"],
+                ignore: DEFAULT_FAST_GLOB_IGNORES,
                 objectMode: true,
                 stats: true,
                 unique: true,
@@ -176,55 +225,33 @@ export async function inventorySourceFiles(config) {
             : [{ path: root, stats: { size: rootInfo.size, mtimeMs: rootInfo.mtimeMs } }];
         for (const entry of entries) {
             const absolutePath = path.isAbsolute(entry.path) ? entry.path : path.resolve(root, entry.path);
-            const relativePath = path.relative(config.projectRoot, absolutePath);
-            if (GENERATED_SOURCE_READMES.has(relativePath)) {
-                continue;
-            }
-            discoveredFiles += 1;
-            const extension = path.extname(absolutePath).toLowerCase();
             const info = entry.stats ?? (await stat(absolutePath));
+            const relativePath = path.relative(config.projectRoot, absolutePath);
             const source = rootInfo.isDirectory()
                 ? path.relative(root, absolutePath) || path.basename(absolutePath)
                 : relativePath || path.basename(absolutePath);
-            const skipped = skippedSourceFile(absolutePath, relativePath, source, extension, info.size);
-            if (skipped) {
-                skippedFiles.set(absolutePath, skipped);
-                continue;
-            }
-            if (!isSupportedSourceFile(absolutePath, extension, config)) {
-                const normalizedExtension = extension || NO_EXTENSION;
-                skippedFiles.set(absolutePath, {
-                    relativePath,
-                    source,
-                    extension: normalizedExtension,
-                    bytes: info.size,
-                    reason: "unsupported-extension",
-                    recommendation: skippedRecommendation("unsupported-extension", normalizedExtension),
-                });
-                continue;
-            }
-            if (info.size > config.maxFileBytes) {
-                const normalizedExtension = extension || NO_EXTENSION;
-                skippedFiles.set(absolutePath, {
-                    relativePath,
-                    source,
-                    extension: normalizedExtension,
-                    bytes: info.size,
-                    reason: "oversized",
-                    recommendation: skippedRecommendation("oversized", normalizedExtension),
-                });
-                continue;
-            }
-            const buffer = await readFile(absolutePath);
-            files.set(absolutePath, {
-                absolutePath,
-                relativePath,
-                source,
-                extension,
-                bytes: info.size,
-                mtimeMs: info.mtimeMs,
-                checksum: createHash("sha256").update(buffer).digest("hex"),
-            });
+            await recordSourceFile(absolutePath, info, source);
+        }
+    }
+    if (inputs.patterns.length > 0) {
+        const entries = (await fg(inputs.patterns, {
+            cwd: config.projectRoot,
+            absolute: true,
+            onlyFiles: true,
+            dot: true,
+            followSymbolicLinks: false,
+            ignore: [...DEFAULT_FAST_GLOB_IGNORES, ...inputs.ignorePatterns],
+            objectMode: true,
+            stats: true,
+            unique: true,
+        }));
+        for (const entry of entries) {
+            const absolutePath = path.isAbsolute(entry.path)
+                ? entry.path
+                : path.resolve(config.projectRoot, entry.path);
+            const info = entry.stats ?? (await stat(absolutePath));
+            const relativePath = path.relative(config.projectRoot, absolutePath);
+            await recordSourceFile(absolutePath, info, relativePath || path.basename(absolutePath));
         }
     }
     return {
@@ -259,10 +286,12 @@ export function summarizeUnsupportedExtensions(skippedFiles) {
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([extension, count]) => ({ extension, count }));
 }
-async function sourceRoots(config) {
+async function sourceInputs(config) {
     const roots = [config.rawDir];
+    const patterns = [];
+    const ignorePatterns = [];
     if (!existsSync(config.sourcesFile)) {
-        return roots;
+        return { roots, patterns, ignorePatterns };
     }
     const content = await readFile(config.sourcesFile, "utf8");
     for (const line of content.split(/\r?\n/u)) {
@@ -270,9 +299,23 @@ async function sourceRoots(config) {
         if (!trimmed || trimmed.startsWith("#")) {
             continue;
         }
+        if (trimmed.startsWith("!")) {
+            ignorePatterns.push(sourcePattern(config.projectRoot, trimmed.slice(1).trim()));
+            continue;
+        }
+        if (GLOB_PATTERN_CHARS.test(trimmed)) {
+            patterns.push(sourcePattern(config.projectRoot, trimmed));
+            continue;
+        }
         roots.push(path.isAbsolute(trimmed) ? trimmed : path.resolve(config.projectRoot, trimmed));
     }
-    return roots;
+    return { roots, patterns, ignorePatterns };
+}
+function sourcePattern(projectRoot, input) {
+    if (path.isAbsolute(input)) {
+        return path.relative(projectRoot, input).replaceAll(path.sep, "/");
+    }
+    return input.replaceAll(path.sep, "/");
 }
 function skippedSourceFile(absolutePath, relativePath, source, extension, bytes) {
     const baseName = path.basename(absolutePath).toLowerCase();

@@ -19,13 +19,15 @@ built to minimize data movement, but it is not a certified high-assurance system
   oversized, and secret-like skipped files.
 - Metadata-only access logs: access logs contain action metadata and query hashes, not raw
   queries or retrieved text.
-- Generated local state is ignored by Git: `.kb/`, `.mimir/`, and `private/**` are ignored by
-  default.
+- Generated local state is ignored by Git: `.mimir/` is ignored by default, while legacy `.kb/` and
+  `private/` paths are recognized when encountered.
 - MCP is read-focused: destructive tools are not exposed over MCP, and MCP retrieval is capped by
   `mcpMaxTopK`.
-- Optional audio summaries use `kb audio` / `@jcode.labs/mimir-tts`. Transformers.js WAV is the
+- Optional audio summaries use `mimir audio` / `@jcode.labs/mimir-tts`. Transformers.js WAV is the
   default offline/confidential path and does not require Python, ffmpeg, Piper, XTTS, or a local TTS
-  server. Edge MP3 gives the highest quality only when online TTS is explicitly acceptable.
+  server. Remote TTS model downloads are disabled by default and must be explicitly allowed for a
+  non-sensitive preload. Edge MP3 gives the highest quality only when online TTS is explicitly
+  acceptable.
 - Optional Markdown reports use the bundled `mimir-markdown-report` skill and should be written
   under `.mimir/reports/` by default.
 - npm releases are published with provenance from the protected GitHub Actions workflow.
@@ -67,15 +69,15 @@ Move the generated tarballs from `release-artifacts/` into the offline environme
 
 ```bash
 pnpm add -D ./jcode.labs-mimir-tts-<version>.tgz ./jcode.labs-mimir-<version>.tgz
-pnpm exec kb setup
-pnpm exec kb doctor --fix
-pnpm exec kb audit --unsupported
+pnpm exec mimir setup
+pnpm exec mimir doctor --fix
+pnpm exec mimir audit --unsupported
 ```
 
 For semantic embeddings, preload the Transformers.js-compatible embedding model files inside the
 offline environment under the configured `embeddingModelPath`. For audio, preload the TTS model
 files under `.mimir/models/tts` and render with
-`pnpm exec kb audio <text-file> --engine transformers --offline`.
+`pnpm exec mimir audio <text-file> --engine transformers --offline`.
 
 ## Zero Network Posture
 
@@ -108,13 +110,13 @@ Transformers.js may download model files from Hugging Face during model loading.
 Run:
 
 ```bash
-pnpm exec kb security-audit --strict
+pnpm exec mimir security-audit --strict
 ```
 
 Also run:
 
 ```bash
-pnpm exec kb audit --unsupported
+pnpm exec mimir audit --unsupported
 ```
 
 This exposes local relative paths for files that were skipped because the extension is unsupported,
@@ -159,14 +161,15 @@ Default ingestion guardrails:
 - `ingestConcurrency`: four parse/chunk workers by default;
 - `embeddingBatchSize`: 32 chunks per embedding batch by default;
 - checksum-based stale detection for supported files;
-- unsupported/skipped file reporting through `kb ingest`, `kb audit`, and `kb audit --unsupported`.
+- unsupported/skipped file reporting through `mimir ingest`, `mimir audit`, and
+  `mimir audit --unsupported`.
 
 These are configurable, but raising limits increases local memory and parsing risk.
 
 ## Optional Audio Summaries
 
-`kb install-skill` installs an optional `mimir-audio-summary` skill. It is designed for listenable
-briefings from a local Mimir index. The default renderer is `kb audio`, backed by
+`mimir install-skill` installs an optional `mimir-audio-summary` skill. It is designed for listenable
+briefings from a local Mimir index. The default renderer is `mimir audio`, backed by
 `@jcode.labs/mimir-tts`.
 
 Confidentiality defaults:
@@ -175,9 +178,9 @@ Confidentiality defaults:
 - generated MP3 or WAV audio should be written under `.mimir/audio/`;
 - `.mimir/` is ignored by Git;
 - Transformers.js WAV does not require Python, ffmpeg, Piper, XTTS, or a local TTS server;
-- the first online-enabled Transformers render may download public model weights into
-  `.mimir/models/tts`, but the narration text is processed locally;
-- `--engine transformers --offline` disables remote model loading and requires preloaded model
+- Transformers remote model loading is disabled by default and requires `--allow-remote-models` for
+  a non-sensitive preload into `.mimir/models/tts`;
+- `--engine transformers --offline` keeps remote model loading disabled and requires preloaded model
   files.
 - Edge MP3 uses the online Edge TTS service through the external `edge-tts` CLI and should be used
   only when sending the narration text to that service is acceptable.
@@ -187,9 +190,10 @@ document.
 
 ## Optional Markdown Reports
 
-`kb install-skill` also installs `mimir-markdown-report`. Reports generated from private evidence are
-derived confidential documents. Keep them under `.mimir/reports/` by default, cite source paths and
-chunk numbers, and do not commit them unless the user explicitly asks for a sanitized tracked report.
+`mimir install-skill` also installs `mimir-markdown-report`. Reports generated from private evidence
+are derived confidential documents. Keep them under `.mimir/reports/` by default, cite source paths
+and chunk numbers, and do not commit them unless the user explicitly asks for a sanitized tracked
+report.
 
 ## MCP Hardening
 

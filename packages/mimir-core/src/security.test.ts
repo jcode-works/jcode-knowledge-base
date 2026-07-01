@@ -54,7 +54,7 @@ describe("securityAudit", () => {
     expect(report.gitignore.legacyPrivateIgnored).toBe(false)
     expect(report.warnings).toContain(".mimir/ is not ignored by Git.")
     expect(report.warnings).not.toContain(".kb/ is not ignored by Git.")
-    expect(report.warnings).not.toContain("private/** is not ignored by Git.")
+    expect(report.warnings).not.toContain("private/ is not ignored by Git.")
   })
 
   it("keeps legacy .kb and private warnings when a legacy config uses those paths", async () => {
@@ -68,6 +68,19 @@ describe("securityAudit", () => {
 
     expect(report.gitignore.mimirIgnored).toBe(true)
     expect(report.warnings).toContain(".kb/ is not ignored by Git.")
-    expect(report.warnings).toContain("private/** is not ignored by Git.")
+    expect(report.warnings).toContain("private/ is not ignored by Git.")
+  })
+
+  it("accepts legacy private/** gitignore entries", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mimir-security-"))
+    tempDirs.push(root)
+    await mkdir(path.join(root, ".kb"), { recursive: true })
+    await writeFile(path.join(root, ".kb", "config.json"), "{}\n", "utf8")
+    await writeFile(path.join(root, ".gitignore"), ".mimir/\n.kb/\nprivate/**\n", "utf8")
+
+    const report = await securityAudit(root)
+
+    expect(report.gitignore.legacyPrivateIgnored).toBe(true)
+    expect(report.warnings).not.toContain("private/ is not ignored by Git.")
   })
 })

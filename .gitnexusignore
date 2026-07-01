@@ -1,0 +1,26 @@
+# GitNexus exclusions. Keep the code graph focused on source, tests, docs, and scripts.
+
+# Dependencies and package-manager state
+node_modules/
+.pnpm-store/
+
+# Local generated Mimir state and agent exposure folders
+.mimir/
+.kb/
+.agents/
+.claude/
+.codex/
+.gitnexus/
+
+# Build outputs and generated package artifacts
+packages/*/dist/
+packages/*/.astro/
+packages/*/.output/
+packages/*/target/
+packages/*/src-tauri/target/
+coverage/
+
+# Local release/download artifacts
+artifacts/
+*.tgz
+*.pid

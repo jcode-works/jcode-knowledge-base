@@ -1,8 +1,8 @@
 # Offline TTS Preload
 
-`mimir audio --offline` disables remote model downloads. It only works after the
-Transformers.js TTS model has already been cached under `.mimir/models/tts` or the path passed with
-`--model-path`.
+`mimir audio` and `mimir-tts` disable remote model downloads by default. `--offline` keeps that
+network posture explicit and only works after the Transformers.js TTS model has already been cached
+under `.mimir/models/tts` or the path passed with `--model-path`.
 
 Use this workflow when you want confidential audio summaries to render without network access.
 

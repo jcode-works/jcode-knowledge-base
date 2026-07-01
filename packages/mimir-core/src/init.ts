@@ -36,7 +36,13 @@ export async function initProject(cwd = process.cwd()): Promise<string[]> {
     await mkdir(path.dirname(sourcesPath), { recursive: true })
     await writeFile(
       sourcesPath,
-      "# Optional extra source paths, one per line. Relative paths resolve from the project root.\n",
+      [
+        "# Optional extra source paths or glob patterns, one per line.",
+        "# Relative paths resolve from the project root. Prefix glob exclusions with !.",
+        "# Example: ../apps/*/docs/**/*.md",
+        "# Example: !../apps/**/node_modules/**",
+        "",
+      ].join("\n"),
       "utf8",
     )
     created.push(path.relative(root, sourcesPath))

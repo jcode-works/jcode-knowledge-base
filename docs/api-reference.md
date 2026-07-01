@@ -12,7 +12,7 @@ context.
 Use named imports only:
 
 ```ts
-import { ask, doctor, ingest, search, securityAudit } from "@jcode.labs/mimir"
+import { addSourceEntries, ask, doctor, ingest, search, securityAudit } from "@jcode.labs/mimir"
 ```
 
 Most project-scoped functions accept an optional `cwd` pointing at the target workspace. If omitted,
@@ -49,12 +49,14 @@ Returns `string[]` with relative paths created or updated.
 
 Runs the normal first-run workflow: initialize the project, install the portable agent kit, run
 doctor, and auto-ingest only when supported files are present and the privacy posture has no
-warnings.
+warnings. Pass `semantic: true` to intentionally preload the configured Transformers.js embedding
+model and switch the workspace to higher-quality semantic retrieval during setup.
 
 ```ts
 import { setupProject } from "@jcode.labs/mimir"
 
-const result = await setupProject({ cwd: "/path/to/workspace", ingest: true })
+const result = await setupProject({ cwd: "/path/to/workspace", ingest: true, semantic: true })
+console.log(result.semantic?.model.embeddingModelPath)
 ```
 
 Use `agents`, `mcpServerName`, `mcpCommand`, and `mcpArgs` when setup should generate only selected
@@ -75,6 +77,7 @@ Useful result fields:
 | --- | --- |
 | `created` | Relative scaffolding files created by setup. |
 | `agentKit` | Paths to generated skills and MCP helper files. |
+| `semantic` | Semantic model preload and config result when `semantic: true`; otherwise `null`. |
 | `ingested` | `IngestResult` when auto-ingest ran; otherwise `null`. |
 | `doctor` | Final readiness report. |
 | `nextSteps` | User-facing next actions. |
@@ -90,6 +93,31 @@ import { loadConfig } from "@jcode.labs/mimir"
 
 const config = await loadConfig("/path/to/workspace/subdir")
 console.log(config.projectRoot)
+```
+
+### `listSourceEntries(cwd?)`
+
+Reads `.mimir/sources.txt` and returns active non-comment entries.
+
+```ts
+import { listSourceEntries } from "@jcode.labs/mimir"
+
+const sources = await listSourceEntries("/path/to/workspace")
+console.log(sources.entries)
+```
+
+### `addSourceEntries(options)`
+
+Adds paths, glob patterns, or `!` exclusion patterns to `.mimir/sources.txt` without duplicating
+existing entries. This is the programmatic equivalent of `mimir sources add`.
+
+```ts
+import { addSourceEntries } from "@jcode.labs/mimir"
+
+await addSourceEntries({
+  cwd: "/path/to/workspace",
+  entries: ["../apps/*/README.md", "../apps/*/docs/**/*.md", "!../apps/**/node_modules/**"],
+})
 ```
 
 ## Ingestion And Retrieval
@@ -223,7 +251,8 @@ await enableSemanticEmbeddings("/path/to/workspace")
 await ingest({ cwd: "/path/to/workspace", rebuild: true })
 ```
 
-The CLI shortcut `mimir models pull --enable` combines model preload with this config update.
+The CLI shortcut `mimir models pull --enable` combines model preload with this config update. The
+first-run CLI shortcut is `mimir setup --semantic`.
 
 ## Readiness And Safety
 
@@ -354,6 +383,10 @@ import { serveMcp } from "@jcode.labs/mimir"
 
 await serveMcp("/path/to/workspace")
 ```
+
+When `cwd` is omitted, the server resolves the root from `MIMIR_PROJECT_ROOT`, then from the current
+working directory if it contains a Mimir config, then from agent-provided project environment such as
+`CLAUDE_PROJECT_DIR`, and finally from `process.cwd()`.
 
 MCP tools exposed by the server:
 

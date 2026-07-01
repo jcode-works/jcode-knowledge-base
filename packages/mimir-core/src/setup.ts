@@ -1,8 +1,11 @@
 import path from "node:path"
+import { loadConfig } from "./config.js"
 import { doctor } from "./doctor.js"
+import { type PullEmbeddingModelResult, pullEmbeddingModel } from "./embeddings.js"
 import { ingest } from "./ingest.js"
 import { initProject } from "./init.js"
 import { mimirCommand, type PackageManager } from "./package-manager.js"
+import { type EnableSemanticEmbeddingsResult, enableSemanticEmbeddings } from "./semantic-config.js"
 import { type AgentTarget, type InstallSkillResult, installSkill } from "./skill.js"
 import type { DoctorReport, IngestResult } from "./types.js"
 
@@ -10,10 +13,16 @@ export interface SetupOptions {
   cwd?: string
   targetDir?: string
   ingest?: boolean
+  semantic?: boolean
   agents?: readonly AgentTarget[]
   mcpServerName?: string
   mcpCommand?: string
   mcpArgs?: readonly string[]
+}
+
+export interface SetupSemanticResult {
+  model: PullEmbeddingModelResult
+  config: EnableSemanticEmbeddingsResult
 }
 
 export interface SetupResult {
@@ -22,6 +31,7 @@ export interface SetupResult {
   runCommand: string
   created: string[]
   agentKit: InstallSkillResult
+  semantic: SetupSemanticResult | null
   ingested: IngestResult | null
   doctor: DoctorReport
   nextSteps: string[]
@@ -47,6 +57,7 @@ export async function setupProject(options: SetupOptions = {}): Promise<SetupRes
     installOptions.mcpArgs = options.mcpArgs
   }
   const agentKit = await installSkill(installOptions)
+  const semantic = options.semantic ? await setupSemanticEmbeddings(cwd) : null
   let report = await doctor(cwd)
   let ingested: IngestResult | null = null
 
@@ -63,9 +74,20 @@ export async function setupProject(options: SetupOptions = {}): Promise<SetupRes
     runCommand: command.display,
     created,
     agentKit,
+    semantic,
     ingested,
     doctor: report,
     nextSteps: setupNextSteps(report),
+  }
+}
+
+async function setupSemanticEmbeddings(cwd: string): Promise<SetupSemanticResult> {
+  const config = await loadConfig(cwd)
+  const model = await pullEmbeddingModel(config)
+  const semanticConfig = await enableSemanticEmbeddings(cwd)
+  return {
+    model,
+    config: semanticConfig,
   }
 }
 

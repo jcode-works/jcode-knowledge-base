@@ -193,4 +193,74 @@ describe("listSourceFiles", () => {
       ],
     )
   })
+
+  it("indexes glob sources with exclusions for monorepo documentation", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mimir-source-glob-"))
+    tempDirs.push(root)
+
+    await mkdir(path.join(root, ".mimir"), { recursive: true })
+    await mkdir(path.join(root, ".mimir", "raw"), { recursive: true })
+    await mkdir(path.join(root, "apps", "front", "docs", "private"), { recursive: true })
+    await mkdir(path.join(root, "apps", "back", "docs"), { recursive: true })
+    await writeFile(
+      path.join(root, ".mimir", "sources.txt"),
+      ["apps/*/README.md", "apps/*/docs/**/*.md", "!apps/*/docs/private/**", ""].join("\n"),
+      "utf8",
+    )
+    await writeFile(path.join(root, "apps", "front", "README.md"), "front readme\n", "utf8")
+    await writeFile(path.join(root, "apps", "front", "docs", "feature.md"), "front docs\n", "utf8")
+    await writeFile(
+      path.join(root, "apps", "front", "docs", "private", "secret.md"),
+      "private docs\n",
+      "utf8",
+    )
+    await writeFile(path.join(root, "apps", "back", "README.md"), "back readme\n", "utf8")
+    await writeFile(path.join(root, "apps", "back", "docs", "api.md"), "back docs\n", "utf8")
+
+    const files = await listSourceFiles(testConfig(root))
+
+    expect(files.map((file) => file.relativePath)).toEqual([
+      "apps/back/docs/api.md",
+      "apps/back/README.md",
+      "apps/front/docs/feature.md",
+      "apps/front/README.md",
+    ])
+    expect(files.map((file) => file.source)).toEqual([
+      "apps/back/docs/api.md",
+      "apps/back/README.md",
+      "apps/front/docs/feature.md",
+      "apps/front/README.md",
+    ])
+  })
+
+  it("indexes parent-relative glob sources from a nested knowledge base", async () => {
+    const monorepo = await mkdtemp(path.join(os.tmpdir(), "mimir-monorepo-glob-"))
+    tempDirs.push(monorepo)
+    const root = path.join(monorepo, "team-knowledge")
+
+    await mkdir(path.join(root, ".mimir"), { recursive: true })
+    await mkdir(path.join(root, ".mimir", "raw"), { recursive: true })
+    await mkdir(path.join(monorepo, "apps", "admin", "docs"), { recursive: true })
+    await mkdir(path.join(monorepo, "apps", "portal", "docs"), { recursive: true })
+    await writeFile(
+      path.join(root, ".mimir", "sources.txt"),
+      ["../apps/*/README.md", "../apps/*/docs/**/*.md", "!../apps/*/docs/private/**", ""].join(
+        "\n",
+      ),
+      "utf8",
+    )
+    await writeFile(path.join(monorepo, "apps", "admin", "README.md"), "admin readme\n", "utf8")
+    await writeFile(path.join(monorepo, "apps", "admin", "docs", "ops.md"), "admin docs\n", "utf8")
+    await writeFile(path.join(monorepo, "apps", "portal", "README.md"), "portal readme\n", "utf8")
+    await writeFile(path.join(monorepo, "apps", "portal", "docs", "ux.md"), "portal docs\n", "utf8")
+
+    const files = await listSourceFiles(testConfig(root))
+
+    expect(files.map((file) => file.relativePath)).toEqual([
+      "../apps/admin/docs/ops.md",
+      "../apps/admin/README.md",
+      "../apps/portal/docs/ux.md",
+      "../apps/portal/README.md",
+    ])
+  })
 })

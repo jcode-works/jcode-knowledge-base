@@ -31,6 +31,7 @@ spread across repositories, specifications, exports, and synced folders.
 | Code from a specification or `cahier des charges` | Turn a local PRD, tender response, client brief, or engineering spec into an implementation plan, acceptance checklist, and cited change guidance. |
 | Work from a downloaded Google Drive folder | Point Mimir at files synced locally through Google Drive for desktop, then let the agent retrieve context without uploading the corpus to a hosted RAG service. |
 | Onboard to a legacy codebase | Ask where a flow is implemented, which modules own a responsibility, which docs explain a behavior, and what to read before changing risky code. |
+| Turn a dense document into a listenable mini-learning | Generate a short spoken summary (MP3/WAV) from cited passages with `mimir audio`, to review a spec, architecture doc, or research pass hands-free instead of only reading dense text. |
 | Keep multiple agents on the same evidence | Install the same project skills and MCP server for Claude Code, Codex, Kimi Code CLI, OpenCode, and Cline so each tool retrieves from the same local index. |
 | Research before implementation | Run an audit-backed multi-query pass over specs, docs, and code references before asking an agent to plan a feature, migration, or review. |
 | Prepare implementation and review work | Generate cited task breakdowns, migration notes, release checklists, QA plans, and code-review context from the same local sources the team uses. |
@@ -81,11 +82,13 @@ The fastest useful path is to install Mimir in the repository, wire it into the 
 already use, then ask that agent questions grounded in local files:
 
 ```bash
-pnpm add -D @jcode.labs/mimir
-pnpm exec mimir setup
-pnpm exec mimir install-agent --agents claude,codex,kimi,opencode,cline
-pnpm exec mimir doctor --fix
-pnpm exec mimir research "release readiness and risks" --compact
+npm install --save-dev @jcode.labs/mimir
+npx mimir setup
+# Optional: download a Transformers.js embedding model once and enable higher-quality semantic retrieval.
+npx mimir setup --semantic
+npx mimir install-agent --agents claude,codex,kimi,opencode,cline
+npx mimir doctor --fix
+npx mimir research "release readiness and risks" --compact
 
 # Claude Code
 claude mcp add-json --scope local mimir "$(cat .mimir/claude-mcp-server.json)"
@@ -129,6 +132,27 @@ The public source and commercial distribution boundary is tracked in
 [`docs/source-boundary.md`](./docs/source-boundary.md) and
 [`docs/commercial-distribution.md`](./docs/commercial-distribution.md). No checkout URL, production
 download URL, customer data, or license secret is committed to this repository.
+
+## Documentation
+
+Use this README as the entrypoint, then jump into the focused docs when you need command tables,
+agent wiring, API shapes, security details, or app packaging rules:
+
+| Document | Use it for |
+| --- | --- |
+| [`docs/cli-reference.md`](./docs/cli-reference.md) | Complete `mimir` and `mimir-tts` command reference. |
+| [`docs/api-reference.md`](./docs/api-reference.md) | Public TypeScript API, setup options, semantic model preload, and MCP tool inputs. |
+| [`docs/agent-integration.md`](./docs/agent-integration.md) | Claude Code, Codex, Kimi Code CLI, OpenCode, and Cline setup. |
+| [`docs/troubleshooting.md`](./docs/troubleshooting.md) | Empty indexes, weak search, strict security audit warnings, and audio preload fixes. |
+| [`SECURITY-HARDENING.md`](./SECURITY-HARDENING.md) | Threat model, offline operation, release verification, and higher-assurance deployment notes. |
+| [`docs/offline-tts-preload.md`](./docs/offline-tts-preload.md) | Preload and verify the offline Transformers.js TTS cache. |
+| [`docs/fr-eu-sovereign-positioning.md`](./docs/fr-eu-sovereign-positioning.md) | Bounded FR/EU sovereignty, GDPR, AI Act, and legal-vertical positioning. |
+| [`docs/source-boundary.md`](./docs/source-boundary.md) | What the public MIT repository contains and what must stay outside Git. |
+| [`docs/commercial-distribution.md`](./docs/commercial-distribution.md) | Public-safe commercial distribution rules for signed builds, licenses, and support. |
+| [`docs/app-sidecar-architecture.md`](./docs/app-sidecar-architecture.md) | Desktop app sidecar and native bridge constraints. |
+| [`docs/app-distribution.md`](./docs/app-distribution.md) | Direct-download native app packaging and release preflight. |
+| [`docs/payment-webhook-architecture.md`](./docs/payment-webhook-architecture.md) | Future checkout, webhook, and local-license architecture. |
+| [`llms.txt`](./llms.txt) | LLM-oriented documentation index for tools such as Context7. |
 
 ## Open Source
 
@@ -216,22 +240,22 @@ release verification, and an external security review.
 
 The package is public. Users do not need a JCode Labs account or npm token to install it.
 
-With pnpm:
-
-```bash
-pnpm add -D @jcode.labs/mimir
-```
-
 With npm:
 
 ```bash
 npm install --save-dev @jcode.labs/mimir
 ```
 
+With pnpm:
+
+```bash
+pnpm add -D @jcode.labs/mimir
+```
+
 Install the standalone TTS package only when you want to use it directly:
 
 ```bash
-pnpm add -D @jcode.labs/mimir-tts
+npm install --save-dev @jcode.labs/mimir-tts
 ```
 
 Maintainer tokens are only needed to publish new versions.
@@ -242,7 +266,12 @@ Initialize a repository, install the portable agent kit, run readiness checks, a
 when supported files are already present:
 
 ```bash
-pnpm exec mimir setup
+# Fast start: no model download, fully local lexical/hash retrieval.
+npx mimir setup
+
+# Higher-quality natural-language retrieval: one-time Transformers.js model download,
+# then remote model loading stays disabled for normal confidential indexing.
+npx mimir setup --semantic
 ```
 
 Fresh setup keeps local state under one ignored `.mimir/` folder:
@@ -268,18 +297,18 @@ Fresh setup keeps local state under one ignored `.mimir/` folder:
 ```
 
 It detects the repository package manager and writes the MCP helper files with the right command:
-`pnpm exec mimir serve-mcp`, `npx mimir serve-mcp`, `yarn exec mimir serve-mcp`, or `bunx mimir serve-mcp`.
+`npx mimir serve-mcp`, `pnpm exec mimir serve-mcp`, `yarn exec mimir serve-mcp`, or `bunx mimir serve-mcp`.
 When a repository needs a wrapper script or only a subset of agent helpers, make that explicit during
 setup:
 
 ```bash
-pnpm exec mimir setup --agents claude,codex --mcp-name project-docs --mcp-command ./scripts/serve-mcp.sh
+npx mimir setup --agents claude,codex --mcp-name project-docs --mcp-command ./scripts/serve-mcp.sh
 ```
 
 For the usual agent-first workflow, expose Mimir to the coding assistants used in the repository:
 
 ```bash
-pnpm exec mimir install-agent --agents claude,codex,kimi,opencode,cline
+npx mimir install-agent --agents claude,codex,kimi,opencode,cline
 ```
 
 Then wire the agent you use. Claude Code, Codex, and Cline follow the standard MCP shapes from their
@@ -309,13 +338,13 @@ context.
 Check readiness at any time:
 
 ```bash
-pnpm exec mimir doctor
+npx mimir doctor
 ```
 
 If files are missing from the index, stale, or the setup is incomplete, run:
 
 ```bash
-pnpm exec mimir doctor --fix
+npx mimir doctor --fix
 ```
 
 `doctor --fix` performs safe repairs: missing scaffolding, Git ignore entries, agent kit install, and
@@ -339,11 +368,69 @@ Put supported files under `.mimir/raw/`:
   requirements.docx
 ```
 
+For monorepos or downloaded local folders, list extra paths or glob patterns in `.mimir/sources.txt`.
+Relative entries resolve from the Mimir project root, and `!` excludes matched files:
+
+```bash
+npx mimir sources add "../apps/*/README.md" "../apps/*/docs/**/*.{md,mdx}"
+npx mimir sources add "!../apps/**/node_modules/**"
+npx mimir sources list
+```
+
+```plain text
+../apps/*/README.md
+../apps/*/docs/**/*.{md,mdx}
+../packages/*/architecture/**/*.md
+!../apps/**/node_modules/**
+```
+
+### Team Workflow With A Shared Private Corpus
+
+For a team of 10 developers, keep Git as the reproducible setup layer and keep the corpus in an
+approved private source. Each developer materializes the same corpus locally, then builds their own
+local Mimir index.
+
+```plain text
+Git repository
+  README.md
+  mimir.config.example.json
+  mimir-sources.example.txt
+  scripts/sync-corpus.sh
+
+Ignored local state on each developer machine
+  .mimir/config.json
+  .mimir/sources.txt
+  .mimir/raw/ or data/private-corpus/
+  .mimir/storage/
+  .mimir/access.log
+  .mimir/models/
+```
+
+If your team uses Google Drive, Dropbox, SharePoint, S3, rsync, an encrypted ZIP, or another private
+source, write a small project script that syncs into an ignored local folder and then ingests:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+mkdir -p .mimir/raw
+# Example only: replace this with your approved private sync command.
+# rclone copy "team-drive:Project Knowledge" .mimir/raw --drive-export-formats docx,xlsx,pptx,pdf
+
+npx mimir ingest
+npx mimir doctor
+```
+
+Commit the script and instructions, not the synced files. The same pattern works without Google
+Drive: every developer downloads the same approved archive or mirror into the same ignored path, then
+runs `npx mimir ingest`. Mimir compares checksums and reuses unchanged rows, so refreshes stay
+incremental.
+
 Build the local index:
 
 ```bash
-pnpm exec mimir ingest
-pnpm exec mimir doctor
+npx mimir ingest
+npx mimir doctor
 ```
 
 When the index is ready, `mimir doctor` prints `ready=true`. `mimir ingest` and `mimir audit` also report
@@ -353,45 +440,45 @@ or the file name looks like a secret/private key.
 List skipped paths explicitly:
 
 ```bash
-pnpm exec mimir audit --unsupported
+npx mimir audit --unsupported
 ```
 
 Summarize recent metadata-only usage without exposing raw queries or local paths:
 
 ```bash
-pnpm exec mimir usage-report --days 7
+npx mimir usage-report --days 7
 ```
 
 Retrieve exact passages:
 
 ```bash
-pnpm exec mimir search "approval for offline operation"
+npx mimir search "approval for offline operation"
 ```
 
 Return cited retrieval context for an agent or model:
 
 ```bash
-pnpm exec mimir ask "What evidence supports offline operation?"
+npx mimir ask "What evidence supports offline operation?"
 ```
 
 Run an audit-backed multi-query research pass before a broad synthesis or implementation task:
 
 ```bash
-pnpm exec mimir research "release readiness and risks" --compact
+npx mimir research "release readiness and risks" --compact
 ```
 
 Measure recall against a golden query file:
 
 ```bash
-pnpm exec mimir evaluate --golden golden-queries.json
+npx mimir evaluate --golden golden-queries.json
 ```
 
 For private dogfooding, keep the real corpus and golden query file outside Git or under an ignored
 local path, then use a threshold that matches the evaluation phase:
 
 ```bash
-pnpm exec mimir --project-root /path/to/workspace ingest
-pnpm exec mimir --project-root /path/to/workspace evaluate --golden .mimir/evaluations/golden-queries.json --fail-under 0.8 --json
+npx mimir --project-root /path/to/workspace ingest
+npx mimir --project-root /path/to/workspace evaluate --golden .mimir/evaluations/golden-queries.json --fail-under 0.8 --json
 ```
 
 The JSON report includes the active `embeddingProvider` and `embeddingModel`, so you can compare
@@ -400,12 +487,12 @@ default local-hash recall with a private Transformers semantic run without stori
 Mimir does not synthesize an LLM answer. It returns cited local passages; your chosen agent or model
 does the writing around those passages.
 
-With npm, use `npx` after installing the package:
+With pnpm, use `pnpm exec` after installing the package:
 
 ```bash
-npx mimir setup
-npx mimir doctor
-npx mimir search "approval for offline operation"
+pnpm exec mimir setup
+pnpm exec mimir doctor
+pnpm exec mimir search "approval for offline operation"
 ```
 
 ## Choose A Retrieval Mode
@@ -428,9 +515,9 @@ lexical/hash-based, not semantic.
 Commands:
 
 ```bash
-pnpm exec mimir ingest
-pnpm exec mimir search "offline retrieval approval"
-pnpm exec mimir ask "What evidence supports offline operation?"
+npx mimir ingest
+npx mimir search "offline retrieval approval"
+npx mimir ask "What evidence supports offline operation?"
 ```
 
 `mimir ask` always returns cited retrieved passages instead of a generated synthesis. You can pass those
@@ -454,16 +541,19 @@ Use this when you want better semantic retrieval while keeping Mimir core free o
 Commands:
 
 ```bash
-pnpm exec mimir models pull --enable
-pnpm exec mimir ingest
-pnpm exec mimir ask "Which passages support offline operation?"
+npx mimir setup --semantic
+# Or later:
+npx mimir models pull --enable
+npx mimir ingest
+npx mimir ask "Which passages support offline operation?"
 ```
 
-`mimir models pull` intentionally allows a one-time download from Hugging Face into
-`embeddingModelPath`. With `--enable`, it also switches `.mimir/config.json` to
-`embeddingProvider: "transformers"` while keeping `transformersAllowRemoteModels` false for
-confidential or air-gapped indexing. Re-run `mimir ingest --rebuild` after changing embedding
-provider or model so stored vectors match the active configuration.
+`mimir setup --semantic` is the first-run shortcut. It intentionally allows a one-time download from
+Hugging Face into `embeddingModelPath`, switches `.mimir/config.json` to `embeddingProvider:
+"transformers"`, and leaves `transformersAllowRemoteModels` false for normal confidential indexing.
+Use `mimir models pull --enable` when you want to make the same choice later. Re-run
+`mimir ingest --rebuild` after changing embedding provider or model so stored vectors match the
+active configuration.
 
 ## Agent Skills And MCP
 
@@ -472,9 +562,9 @@ Mimir ships with portable agent skills and a standard MCP server.
 Use `mimir setup` for the normal path, or install only the agent layer later:
 
 ```bash
-pnpm exec mimir install-skill
-pnpm exec mimir install-skill --agents claude,codex --mcp-command ./scripts/serve-mcp.sh
-pnpm exec mimir install-agent --agents claude,codex,kimi,opencode,cline
+npx mimir install-skill
+npx mimir install-skill --agents claude,codex --mcp-command ./scripts/serve-mcp.sh
+npx mimir install-agent --agents claude,codex,kimi,opencode,cline
 ```
 
 The bundled skill is also directly installable from this repository with the
@@ -506,7 +596,7 @@ cat .mimir/cline-mcp.json
 Start the MCP server from the repository root when a compatible agent needs tool access:
 
 ```bash
-pnpm exec mimir serve-mcp
+npx mimir serve-mcp
 ```
 
 The MCP server exposes `mimir_status`, `mimir_search`, `mimir_ask`, `mimir_research`,
@@ -524,9 +614,9 @@ Mimir includes a plug-and-play text-to-speech path for listenable summaries.
 For the same quality path as the global Voice Forge skill, install `edge-tts` and render MP3:
 
 ```bash
-pnpm exec mimir audio --doctor
+npx mimir audio --doctor
 pipx install edge-tts
-pnpm exec mimir audio /tmp/MIMIR-SUMMARY-project.txt \
+npx mimir audio /tmp/MIMIR-SUMMARY-project.txt \
   --engine edge \
   --out .mimir/audio/project-summary.mp3
 ```
@@ -539,7 +629,7 @@ By default, `mimir audio` uses the Transformers.js WAV path. For confidential or
 preload Transformers.js-compatible model files with non-sensitive text, then render WAV offline:
 
 ```bash
-pnpm exec mimir audio /tmp/MIMIR-SUMMARY-project.txt \
+npx mimir audio /tmp/MIMIR-SUMMARY-project.txt \
   --engine transformers \
   --offline \
   --model-path .mimir/models/tts \
@@ -549,8 +639,8 @@ pnpm exec mimir audio /tmp/MIMIR-SUMMARY-project.txt \
 Use the standalone package directly:
 
 ```bash
-pnpm exec mimir-tts doctor --json
-pnpm exec mimir-tts render /tmp/MIMIR-SUMMARY-project.txt \
+npx mimir-tts doctor --json
+npx mimir-tts render /tmp/MIMIR-SUMMARY-project.txt \
   --engine edge \
   --out .mimir/audio/project-summary.mp3
 ```
@@ -591,6 +681,8 @@ Mimir is designed for private repositories and sensitive local evidence.
 - No LLM generation in core: Mimir returns cited context for the agent/runtime you choose.
 - Local-hash by default: no model runtime is required for the default retrieval path.
 - Transformers.js remote model loading is disabled by default.
+- Optional Transformers.js model downloads require an explicit preload command or
+  `--allow-remote-models`; confidential runs should use already cached local model files.
 - Redaction before indexing: common secrets and identifiers are redacted before chunks are embedded
   and stored.
 - Metadata-only access logs: query hashes and action metadata are logged, not raw queries.
@@ -602,13 +694,13 @@ Mimir is designed for private repositories and sensitive local evidence.
 Run:
 
 ```bash
-pnpm exec mimir security-audit --strict
+npx mimir security-audit --strict
 ```
 
 Remove the generated vector index:
 
 ```bash
-pnpm exec mimir destroy-index --yes
+npx mimir destroy-index --yes
 ```
 
 `destroy-index` does not securely erase SSD or copy-on-write storage. For strong deletion
@@ -660,7 +752,7 @@ Custom UTF-8 text extensions can be enabled without changing code:
 Or through:
 
 ```bash
-MIMIR_INCLUDE_EXTENSIONS=".transcript,.evidence" pnpm exec mimir ingest
+MIMIR_INCLUDE_EXTENSIONS=".transcript,.evidence" npx mimir ingest
 ```
 
 Audio/video files and formats that are not listed are not useful to Mimir as-is. They can still be
@@ -684,7 +776,11 @@ under a source directory.
 
 ## Configuration Reference
 
-Default `.mimir/config.json`:
+Most users should start with `mimir setup` and let `mimir doctor` explain what is missing. Edit
+`.mimir/config.json` only when you need to change source paths, retrieval mode, chunking, privacy
+limits, or local extractors.
+
+Default `.mimir/config.json` for a fresh project:
 
 ```json
 {
@@ -750,6 +846,8 @@ Environment overrides:
 
 Legacy `KB_*` aliases remain accepted for existing automation.
 
+### External Extractors
+
 `pdfOcrCommand` is opt-in and only runs when normal PDF text extraction returns no text.
 `imageOcrCommand` is also opt-in; image files are treated as supported only when it is configured.
 `legacyWordCommand` is opt-in; `.doc` files are treated as supported only when it is configured.
@@ -757,21 +855,24 @@ External text commands are executed from the target project root without a shell
 `MIMIR_PDF_PATH`, `MIMIR_IMAGE_PATH`, or `MIMIR_LEGACY_WORD_PATH`, replace `{input}` placeholders
 with the source path, and must print UTF-8 text to stdout.
 
-## CLI Reference
+## Command And API Reference
 
 Mimir ships two CLIs:
 
-- `mimir`: the main local RAG, MCP, skills, security, and audio command. `kb` remains a legacy alias for compatibility.
+- `mimir`: the main local RAG, MCP, skills, security, and audio command. `kb` remains a legacy alias
+  for compatibility.
 - `mimir-tts`: the standalone text-to-speech renderer used by `mimir audio`.
 
 Most users start with `mimir setup`, `mimir doctor`, `mimir ingest`, `mimir search`, `mimir ask`,
-`mimir research`, and `mimir security-audit`. Use `mimir models pull --enable` before semantic
-offline ingestion when remote model download is acceptable, and `mimir ingest --rebuild` after
-switching embedding provider or model.
+`mimir research`, and `mimir security-audit`.
 
-The full command and option table lives in [`docs/cli-reference.md`](./docs/cli-reference.md).
+Use `mimir setup --semantic` during first setup, or `mimir models pull --enable` later, when a
+one-time Transformers.js model download is acceptable and you want higher-quality semantic retrieval.
+Run `mimir ingest --rebuild` after switching embedding provider or model.
 
-## Library API
+Full command table: [`docs/cli-reference.md`](./docs/cli-reference.md).
+
+The TypeScript API mirrors the CLI for applications and sidecars:
 
 ```ts
 import { ask, ingest, search } from "@jcode.labs/mimir"
@@ -781,25 +882,28 @@ const results = await search("vendor invoice status")
 const answer = await ask("What documents support the project timeline?")
 ```
 
-The full public TypeScript API reference lives in
-[`docs/api-reference.md`](./docs/api-reference.md).
+Full API reference: [`docs/api-reference.md`](./docs/api-reference.md).
 
-## Troubleshooting
+## Troubleshooting And Validation
 
 Use `mimir doctor` first. It is the shortest path to the next useful action:
 
 ```bash
-pnpm exec mimir doctor
+npx mimir doctor
 ```
 
 Use `doctor --fix` when you want Mimir to repair safe setup issues automatically:
 
 ```bash
-pnpm exec mimir doctor --fix
+npx mimir doctor --fix
 ```
 
 Common fixes for empty indexes, weak search, strict security audit failures, and TTS setup live in
 [`docs/troubleshooting.md`](./docs/troubleshooting.md).
+
+For release or integration work in this repository, `pnpm validate` is the full local gate. It covers
+Biome, dependency security audit, TypeScript, Vitest, build output, production CLI/MCP smoke tests,
+npm package metadata, semantic-release wiring, and release artifacts.
 
 ## Dependency Footprint
 
@@ -808,12 +912,16 @@ core features:
 
 | Dependency | Why it remains |
 | --- | --- |
-| `@huggingface/transformers` | Optional local semantic embeddings and offline TTS. |
+| `@huggingface/transformers` | Optional local semantic embeddings and offline TTS; remote model loading is disabled unless explicitly enabled for preload. |
 | LanceDB | Local vector storage and nearest-neighbor retrieval. |
 | MCP SDK | MCP server for compatible agents. |
 | fast-glob | Safe source-file discovery. |
 | unpdf, mammoth, read-excel-file, html-to-text, yaml, fflate | Document parsing for PDF, Office, HTML, YAML, OpenDocument, and EPUB files. |
 | commander, zod, picocolors | CLI, config validation, readable terminal output. |
+
+Direct runtime dependency scans do not show analytics SDKs or product telemetry calls. The Astro
+landing package uses a wrapper that sets `ASTRO_TELEMETRY_DISABLED=1` for dev, check, preview, and
+build commands.
 
 Removing more dependencies is possible only by dropping features or replacing them with smaller
 internal implementations. The current low-friction path is dependency-light at runtime for users who
@@ -842,7 +950,7 @@ node ../../dist/cli.js audit
 The example uses the default local-hash retrieval mode, so it can run without downloading an
 embedding or chat model.
 
-## Development
+## Development And Release
 
 Install and validate the monorepo:
 
@@ -900,27 +1008,6 @@ Create a local npm tarball:
 pnpm build
 pnpm --dir packages/mimir-core pack
 ```
-
-## Supporting Documents
-
-- [`SECURITY-HARDENING.md`](./SECURITY-HARDENING.md): threat model, offline operation, release
-  verification, and high-assurance deployment notes.
-- [`docs/api-reference.md`](./docs/api-reference.md): public TypeScript API functions, result types,
-  and MCP tool inputs.
-- [`docs/fr-eu-sovereign-positioning.md`](./docs/fr-eu-sovereign-positioning.md): bounded FR/EU
-  sovereignty, GDPR, AI Act, and legal-vertical positioning.
-- [`docs/source-boundary.md`](./docs/source-boundary.md): what the public MIT repository contains,
-  and what must stay outside Git.
-- [`docs/commercial-distribution.md`](./docs/commercial-distribution.md): public-safe commercial
-  distribution rules for signed builds, licenses, and support.
-- [`docs/offline-tts-preload.md`](./docs/offline-tts-preload.md): preload and verify the offline
-  Transformers.js TTS cache before rendering confidential audio.
-- [`docs/payment-webhook-architecture.md`](./docs/payment-webhook-architecture.md): direct-download
-  checkout, webhook, and local-license architecture for future commercial app distribution.
-- [`docs/ux-dx-audit.md`](./docs/ux-dx-audit.md): current UX/DX findings, fixes, and remaining
-  product risks.
-- [`llms.txt`](./llms.txt): LLM-oriented index of this repository's documentation, following the
-  [llms.txt](https://llmstxt.org/) convention; consumed by tools like Context7.
 
 ## License
 

@@ -95,10 +95,34 @@ describe("doctor", () => {
   it("reports Python-free renderers and the offline default engine", async () => {
     await expect(doctor()).resolves.toMatchObject({
       defaultEngine: "transformers",
+      defaultAllowRemoteModels: false,
       edgeDefaultVoice: "fr-FR-DeniseNeural",
       pythonRequired: false,
       ffmpegRequired: false,
       outputFormat: "mp3-or-wav",
     })
+  })
+
+  it("does not allow remote model loading by default", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mimir-tts-remote-default-"))
+    tempDirs.push(root)
+    const textFile = path.join(root, "summary.txt")
+    const outputPath = path.join(root, ".mimir/audio/summary.wav")
+    await writeFile(textFile, "Bonjour depuis Mimir.", "utf8")
+
+    const synthesizer: TextToAudioSynthesizer = async () => ({
+      save: async (target) => {
+        await writeFile(target, "RIFF fake wav", "utf8")
+      },
+    })
+
+    const result = await renderSpeech({
+      cwd: root,
+      textFile,
+      outputPath,
+      synthesizer,
+    })
+
+    expect(result.allowRemoteModels).toBe(false)
   })
 })

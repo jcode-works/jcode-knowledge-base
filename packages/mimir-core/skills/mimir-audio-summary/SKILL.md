@@ -111,10 +111,10 @@ pnpm exec mimir audio /tmp/MIMIR-SUMMARY-<subject-kebab>.txt \
   --out .mimir/audio/MIMIR-SUMMARY-<subject-kebab>.wav
 ```
 
-The Transformers.js path does not require Python, ffmpeg, Piper, XTTS, or a local TTS server. The
-first non-offline Transformers render can download public model files into `.mimir/models/tts`, but
-the narration text is processed locally. Preload with a synthetic non-sensitive sentence first; the
-repository guide is `docs/offline-tts-preload.md`.
+The Transformers.js path does not require Python, ffmpeg, Piper, XTTS, or a local TTS server. Remote
+model downloads are disabled by default and require `--allow-remote-models` for an explicit
+non-sensitive preload into `.mimir/models/tts`. Preload with a synthetic non-sensitive sentence
+first; the repository guide is `docs/offline-tts-preload.md`.
 
 Use the voice-forge helper only when the user explicitly wants XTTS, macOS `say`, or Piper:
 

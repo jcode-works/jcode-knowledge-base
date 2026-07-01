@@ -17,7 +17,8 @@
   generated agent configs, landing copy, and setup guidance should use `mimir ...` commands.
 - `mimir init` and `mimir install-skill` must keep generated local Mimir state ignored in target
   repositories. By default, add one `.mimir/` entry to the target repository `.gitignore`; `.kb/`
-  and `private/**` are legacy-only compatibility paths.
+  and `private/` are legacy-only compatibility paths. `security-audit` should still accept older
+  `private/**` entries.
 - Keep confidentiality features low-friction: local-hash retrieval by default, optional
   Transformers.js embeddings with remote model loading disabled by default, redaction before
   indexing, metadata-only access logs, bounded MCP retrieval, configurable text-extension ingestion,
@@ -31,6 +32,9 @@
 - Keep first-run UX centered on `mimir setup` for full onboarding and `mimir doctor --fix` for safe
   repairs. `mimir init`, `mimir install-skill`, and `mimir ingest` remain available as explicit
   lower-level commands.
+- Keep monorepo source onboarding simple: `.mimir/sources.txt` accepts paths, glob patterns, and
+  `!` exclusions, and `mimir sources add/list` is the CLI surface for updating it without manual
+  editing.
 - Keep product documentation canonical in the root `README.md`. Package README files under
   `packages/*/README.md` are intentionally minimal npm entrypoints and must link clearly to the
   GitHub root README because npm displays package README files separately.
@@ -71,7 +75,10 @@
   packages/mimir-landing` for the Astro landing surface; do not duplicate landing-local UI
   components when an export from `@jcode.labs/mimir-ui` fits.
 - `packages/mimir-landing` is the Astro static landing package. It must stay telemetry-free by
-  default; do not add PostHog. If analytics are needed later, prefer Cloudflare Web Analytics.
+  default; do not add PostHog. Run Astro through
+  `packages/mimir-landing/scripts/astro-no-telemetry.mjs` so local dev, check, preview, and build
+  commands set `ASTRO_TELEMETRY_DISABLED=1`. If analytics are needed later, prefer Cloudflare Web
+  Analytics.
 - The landing deploy target is Cloudflare Workers Static Assets through
   `packages/mimir-landing/wrangler.jsonc` and the canonical domain `mimir.jcode.works`. Keep
   Cloudflare account IDs, tokens, and analytics secrets out of the repository; use local dry-runs
@@ -128,8 +135,9 @@
   Voice Forge quality only when online TTS is explicitly acceptable, and keep generated audio under
   ignored local Mimir state.
 - Keep offline TTS preload explicit: use non-sensitive text for the first remote-model render that
-  warms `.mimir/models/tts`, then use `--offline` for confidential narration. The operational guide
-  lives in `docs/offline-tts-preload.md`.
+  warms `.mimir/models/tts`, pass `--allow-remote-models` only for that preload, then use `--offline`
+  for confidential narration. Remote TTS model loading must stay disabled by default. The
+  operational guide lives in `docs/offline-tts-preload.md`.
 - Keep report generation separate from core retrieval. The `mimir-markdown-report` skill writes cited
   Markdown reports under ignored `.mimir/reports/` by default and must distinguish evidence,
   inference, uncertainty, missing documents, and professional-review items.
@@ -154,15 +162,19 @@
   `KB_PDF_OCR_COMMAND` and `KB_IMAGE_OCR_COMMAND` remain legacy aliases only.
 - Keep the repository as a simple pnpm workspace monorepo. Add Turbo only if multiple packages or
   apps start needing task caching/orchestration beyond `pnpm --filter`.
-- The Node.js version is pinned once, in `mise.toml` (via [mise](https://mise.jdx.dev/)). Bump the
-  version there only, not as a hardcoded `node-version` in individual workflow steps. CI
-  (`ci.yml`, `native-app-build.yml`) installs mise with the official `curl https://mise.run | sh`
-  script in a plain `run:` step, not the `jdx/mise-action` marketplace action — this repo's Actions
-  permissions are restricted to `actions/*`, `github/codeql-action/*`, and verified creators, and
+- The Node.js and Rust versions are each pinned once, in `mise.toml` (via
+  [mise](https://mise.jdx.dev/)); Rust is only used by `packages/mimir-app`'s Tauri shell. Bump
+  versions there only, not as a hardcoded `node-version` in individual workflow steps. Run `pnpm
+  bootstrap` (`mise install && pnpm install`) for one-command onboarding. CI (`ci.yml`,
+  `native-app-build.yml`) installs mise with the official `curl https://mise.run | sh` script in a
+  plain `run:` step, not the `jdx/mise-action` marketplace action — this repo's Actions permissions
+  are restricted to `actions/*`, `github/codeql-action/*`, and verified creators, and
   `jdx/mise-action` does not qualify. `npm-publish.yml` keeps `actions/setup-node` instead, because
   that step also wires the npm registry `.npmrc` for publishing; keep its `node-version` in sync
   with `mise.toml` by hand. pnpm stays pinned via Corepack through `packageManager` in
-  `package.json`, not duplicated in `mise.toml`.
+  `package.json`, not duplicated in `mise.toml`. Keep mise scoped to toolchain-version pinning —
+  it is not a package manager or task runner here, so don't mirror `package.json` scripts as mise
+  tasks; that would just create a second source of truth for no benefit.
 - Keep Mimir core free of Ollama. `embeddingProvider: "local-hash"` supports ingestion, search, MCP,
   and cited retrieval without a model server, but it must not be described as equivalent to semantic
   retrieval. `embeddingProvider: "transformers"` is the optional semantic embedding path.
@@ -217,6 +229,12 @@ General principles (KISS, DRY, YAGNI, SOLID) as applied in this codebase. Match 
 - `packages/mimir-core/src/defaults.ts` owns shared default paths, provider defaults, and generated-state ignore
   constants. Keep config/init/security/gitignore aligned through this module instead of copying
   literals.
+- `packages/mimir-core/src/sources.ts` owns the `.mimir/sources.txt` management API used by
+  `mimir sources add/list`; file discovery itself remains in `files.ts`.
+- `packages/mimir-core/src/skill.ts` owns agent skill installation and the per-agent
+  `agentHelpers`/MCP config generation (`AgentHelperFile`) behind `mimir setup` and
+  `mimir install-skill`/`install-agent`. Add a new agent target through `SUPPORTED_AGENT_TARGETS`
+  and its helper builder here, not by hand-listing agents in `cli.ts`.
 - `packages/mimir-core/src/ingest.ts` parses supported files, chunks text, embeds chunks, and rebuilds the
   local LanceDB table. Normal ingest is incremental and reuses rows whose checksum/provider/model
   still match; `--rebuild` forces a full re-index.
@@ -226,6 +244,10 @@ General principles (KISS, DRY, YAGNI, SOLID) as applied in this codebase. Match 
   supported by default; convert them to `.xlsx`, CSV, PDF, HTML, or text before ingesting.
 - `packages/mimir-core/src/query.ts` performs hybrid retrieval (vector candidates plus bounded lexical
   BM25 scoring) and returns cited retrieval context; LLM synthesis belongs outside Mimir core.
+- `packages/mimir-core/src/research.ts` runs the audit-backed multi-query research pass behind
+  `mimir research`, combining `query.ts` search results with `ingest.ts` audit coverage.
+- `packages/mimir-core/src/evaluate.ts` scores retrieval recall against a golden query file behind
+  `mimir evaluate`, for the local recall gate described above.
 - `packages/mimir-core/src/mcp.ts` exposes Mimir as an MCP stdio server for agents.
 - `packages/mimir-tts` is the standalone TTS package used by `mimir audio`; it uses `edge-tts` for
   high-quality MP3 when available and Transformers.js for offline WAV rendering.
@@ -257,6 +279,9 @@ General principles (KISS, DRY, YAGNI, SOLID) as applied in this codebase. Match 
   config layers, `.mimir/kimi-mcp.json` for Kimi, `.mimir/opencode.jsonc` for OpenCode, and
   `.mimir/cline-mcp.json` for Cline. Keep `--agents` available on setup/install-skill so a target
   repository can generate only the helpers it uses and remove stale unselected helpers.
+- `mimir setup --semantic` is the first-run opt-in path for higher-quality semantic retrieval. It
+  may download the configured Transformers.js embedding model once, then must leave
+  `transformersAllowRemoteModels` false for normal confidential indexing.
 - Keep `--mcp-name`, `--mcp-command`, and repeatable `--mcp-arg` available on setup/install-skill
   so repositories can generate MCP helper files for a stable server name or local wrapper script
   without post-processing `.mimir/`.
@@ -275,7 +300,7 @@ General principles (KISS, DRY, YAGNI, SOLID) as applied in this codebase. Match 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **jcode-mimir** (2559 symbols, 4274 relationships, 218 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **jcode-mimir** (2829 symbols, 4724 relationships, 241 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

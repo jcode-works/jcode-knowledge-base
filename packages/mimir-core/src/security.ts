@@ -7,6 +7,7 @@ import {
   LEGACY_KB_GITIGNORE_ENTRY,
   LEGACY_PRIVATE_DIR,
   LEGACY_PRIVATE_GITIGNORE_ENTRY,
+  LEGACY_PRIVATE_GITIGNORE_FALLBACK_ENTRY,
   MIMIR_GITIGNORE_ENTRY,
 } from "./defaults.js"
 import type { SecurityAuditReport } from "./types.js"
@@ -18,7 +19,9 @@ export async function securityAudit(cwd = process.cwd()): Promise<SecurityAuditR
 
   const legacyKbIgnored = hasGitignoreEntry(gitignore, LEGACY_KB_GITIGNORE_ENTRY)
   const mimirIgnored = hasGitignoreEntry(gitignore, MIMIR_GITIGNORE_ENTRY)
-  const legacyPrivateIgnored = hasGitignoreEntry(gitignore, LEGACY_PRIVATE_GITIGNORE_ENTRY)
+  const legacyPrivateIgnored =
+    hasGitignoreEntry(gitignore, LEGACY_PRIVATE_GITIGNORE_ENTRY) ||
+    hasGitignoreEntry(gitignore, LEGACY_PRIVATE_GITIGNORE_FALLBACK_ENTRY)
   const usesLegacyKb = [config.storageDir, config.sourcesFile, config.accessLogPath].some(
     (filePath) => usesProjectDirectory(config.projectRoot, filePath, LEGACY_KB_DIR),
   )

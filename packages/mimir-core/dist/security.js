@@ -2,14 +2,15 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { loadConfig } from "./config.js";
-import { LEGACY_KB_DIR, LEGACY_KB_GITIGNORE_ENTRY, LEGACY_PRIVATE_DIR, LEGACY_PRIVATE_GITIGNORE_ENTRY, MIMIR_GITIGNORE_ENTRY, } from "./defaults.js";
+import { LEGACY_KB_DIR, LEGACY_KB_GITIGNORE_ENTRY, LEGACY_PRIVATE_DIR, LEGACY_PRIVATE_GITIGNORE_ENTRY, LEGACY_PRIVATE_GITIGNORE_FALLBACK_ENTRY, MIMIR_GITIGNORE_ENTRY, } from "./defaults.js";
 export async function securityAudit(cwd = process.cwd()) {
     const config = await loadConfig(cwd);
     const gitignore = await readGitignore(config.projectRoot);
     const warnings = [];
     const legacyKbIgnored = hasGitignoreEntry(gitignore, LEGACY_KB_GITIGNORE_ENTRY);
     const mimirIgnored = hasGitignoreEntry(gitignore, MIMIR_GITIGNORE_ENTRY);
-    const legacyPrivateIgnored = hasGitignoreEntry(gitignore, LEGACY_PRIVATE_GITIGNORE_ENTRY);
+    const legacyPrivateIgnored = hasGitignoreEntry(gitignore, LEGACY_PRIVATE_GITIGNORE_ENTRY) ||
+        hasGitignoreEntry(gitignore, LEGACY_PRIVATE_GITIGNORE_FALLBACK_ENTRY);
     const usesLegacyKb = [config.storageDir, config.sourcesFile, config.accessLogPath].some((filePath) => usesProjectDirectory(config.projectRoot, filePath, LEGACY_KB_DIR));
     const usesLegacyPrivate = usesProjectDirectory(config.projectRoot, config.rawDir, LEGACY_PRIVATE_DIR);
     const storageGitIgnored = isPathIgnored(config.projectRoot, config.storageDir, gitignore);

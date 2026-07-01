@@ -10,11 +10,14 @@ Mimir ships two CLIs:
 | Command | Use it when |
 | --- | --- |
 | `mimir setup` | Initialize Mimir, install the agent kit, run doctor, and ingest when safe. |
+| `mimir setup --semantic` | Run first setup and explicitly download the configured Transformers.js embedding model for higher-quality semantic retrieval. |
 | `mimir init` | Create `.mimir/config.json`, `.mimir/sources.txt`, `.mimir/raw/`, and Git ignore rules. |
 | `mimir doctor` | Diagnose setup, index freshness, security warnings, and the next command to run. |
 | `mimir doctor --fix` | Create missing scaffolding, install skills/MCP config, and update stale indexes when safe. |
 | `mimir models pull` | Download the configured Transformers.js embedding model into `embeddingModelPath`. |
 | `mimir models pull --enable` | Download the embedding model and switch Mimir config to safe Transformers embeddings. |
+| `mimir sources add "../apps/*/docs/**/*.md"` | Add source paths, glob patterns, or `!` exclusions to `.mimir/sources.txt`. |
+| `mimir sources list` | List active extra source entries from `.mimir/sources.txt`. |
 | `mimir ingest` | Parse changed source files, redact, chunk, embed, and update the local LanceDB index. |
 | `mimir ingest --rebuild` | Force a full re-index, required after switching embedding provider or model. |
 | `mimir audit` | Check whether supported source files are missing from or stale in the index. |
@@ -63,6 +66,7 @@ Mimir ships two CLIs:
 | `--mcp-name <name>` | `setup`, `install-skill` | Set the MCP server name used in generated helper files. |
 | `--mcp-command <command>` | `setup`, `install-skill` | Use a repository wrapper or custom executable as the generated MCP stdio command. |
 | `--mcp-arg <arg>` | `setup`, `install-skill` | Add one argument to `--mcp-command`; repeat for multiple arguments. Use `--mcp-arg=--flag` for dash-prefixed values. |
+| `--semantic` | `setup` | Explicitly download the configured Transformers.js embedding model once, enable `embeddingProvider: "transformers"`, and keep remote model loading disabled for normal indexing. |
 | `--top-k <number>` | `search`, `ask`, `research`, `evaluate` | Number of passages to return or keep. |
 | `--fail-under <recall>` | `evaluate` | Exit non-zero only when recall is below a threshold from `0` to `1`; without this option evaluation remains strict and fails on any miss. |
 | `--days <number>` | `usage-report` | Number of recent days to include in the metadata-only usage summary. |

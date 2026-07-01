@@ -8,6 +8,7 @@ export const DEFAULT_TTS_MODEL = "Xenova/mms-tts-fra"
 export const DEFAULT_TTS_MODEL_PATH = ".mimir/models/tts"
 export const DEFAULT_AUDIO_DIR = ".mimir/audio"
 export const DEFAULT_TTS_ENGINE = "transformers"
+export const DEFAULT_TTS_ALLOW_REMOTE_MODELS = false
 export const DEFAULT_EDGE_VOICE = "fr-FR-DeniseNeural"
 export const DEFAULT_EDGE_RATE = "+0%"
 
@@ -66,6 +67,7 @@ export interface DoctorReport {
   defaultEngine: TtsEngine
   defaultModel: string
   defaultModelPath: string
+  defaultAllowRemoteModels: boolean
   transformersAvailable: boolean
   edgeTtsAvailable: boolean
   edgeDefaultVoice: string
@@ -97,7 +99,8 @@ export async function renderSpeech(options: RenderSpeechOptions): Promise<Render
     options.outputPath ?? defaultOutputPath(cwd, options.textFile, outputFormatForEngine(engine)),
   )
   const allowRemoteModels =
-    options.allowRemoteModels ?? readBooleanEnv("MIMIR_TTS_ALLOW_REMOTE_MODELS", true)
+    options.allowRemoteModels ??
+    readBooleanEnv("MIMIR_TTS_ALLOW_REMOTE_MODELS", DEFAULT_TTS_ALLOW_REMOTE_MODELS)
 
   await mkdir(path.dirname(outputPath), { recursive: true })
 
@@ -154,6 +157,7 @@ export async function doctor(): Promise<DoctorReport> {
     defaultEngine: DEFAULT_TTS_ENGINE,
     defaultModel: DEFAULT_TTS_MODEL,
     defaultModelPath: DEFAULT_TTS_MODEL_PATH,
+    defaultAllowRemoteModels: DEFAULT_TTS_ALLOW_REMOTE_MODELS,
     transformersAvailable: await canImportTransformers(),
     edgeTtsAvailable: edgeTtsAvailable(),
     edgeDefaultVoice: DEFAULT_EDGE_VOICE,
