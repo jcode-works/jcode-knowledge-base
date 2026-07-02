@@ -3,33 +3,42 @@ import { existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import fg from "fast-glob";
-import { DEFAULT_CONFIG, LEGACY_PRIVATE_DIR } from "./defaults.js";
+import { DEFAULT_CONFIG, LEGACY_KB_DIR, LEGACY_PRIVATE_DIR, MIMIR_DIR } from "./defaults.js";
 const GENERATED_SOURCE_READMES = new Set([
     `${DEFAULT_CONFIG.rawDir}/README.md`,
     `${LEGACY_PRIVATE_DIR}/README.md`,
 ]);
 const NO_EXTENSION = "(none)";
 const SENSITIVE_FILE_NAMES = new Set([
-    ".env",
-    ".env.local",
-    ".env.production",
-    ".npmrc",
-    ".pypirc",
+    ".htpasswd",
     ".netrc",
+    ".npmrc",
     ".pgpass",
+    ".pypirc",
+    "credentials",
+    "id_dsa",
+    "id_ecdsa",
+    "id_ed25519",
+    "id_rsa",
 ]);
 const SENSITIVE_EXTENSIONS = new Set([
+    ".asc",
+    ".cer",
     ".crt",
     ".der",
     ".gpg",
     ".jks",
+    ".kdbx",
     ".key",
     ".keystore",
+    ".ovpn",
     ".p12",
+    ".p8",
     ".pem",
     ".pfx",
+    ".ppk",
 ]);
-const OCR_IMAGE_EXTENSIONS = new Set([
+export const OCR_IMAGE_EXTENSIONS = new Set([
     ".avif",
     ".bmp",
     ".gif",
@@ -69,7 +78,12 @@ const DEFAULT_SUPPORTED_FILE_NAMES = new Set([
     "procfile",
     "rakefile",
 ]);
-const DEFAULT_FAST_GLOB_IGNORES = ["**/.git/**", "**/node_modules/**", "**/.kb/**", "**/.mimir/**"];
+export const DEFAULT_FAST_GLOB_IGNORES = [
+    "**/.git/**",
+    "**/node_modules/**",
+    `**/${LEGACY_KB_DIR}/**`,
+    `**/${MIMIR_DIR}/**`,
+];
 const GLOB_PATTERN_CHARS = /[*?[{]/u;
 export const DEFAULT_SUPPORTED_EXTENSIONS = new Set([
     ".atom",
@@ -317,9 +331,21 @@ function sourcePattern(projectRoot, input) {
     }
     return input.replaceAll(path.sep, "/");
 }
-function skippedSourceFile(absolutePath, relativePath, source, extension, bytes) {
+export function isSensitiveFilePath(absolutePath) {
     const baseName = path.basename(absolutePath).toLowerCase();
-    if (!SENSITIVE_FILE_NAMES.has(baseName) && !SENSITIVE_EXTENSIONS.has(extension)) {
+    const extension = path.extname(absolutePath).toLowerCase();
+    return (isEnvFileName(baseName) ||
+        SENSITIVE_FILE_NAMES.has(baseName) ||
+        SENSITIVE_EXTENSIONS.has(extension));
+}
+function isEnvFileName(baseName) {
+    return baseName === ".env" || baseName.startsWith(".env.");
+}
+export function countSkippedByReason(files, reason) {
+    return files.filter((file) => file.reason === reason).length;
+}
+function skippedSourceFile(absolutePath, relativePath, source, extension, bytes) {
+    if (!isSensitiveFilePath(absolutePath)) {
         return null;
     }
     return {
